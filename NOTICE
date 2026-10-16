@@ -1,0 +1,3 @@
+هذا المشروع يغلّف SearXNG (https://github.com/searxng/searxng) داخل تطبيق أندرويد.
+SearXNG مرخّص بـ AGPL-3.0-or-later؛ وكذلك هذا المشروع. المجلد searx/ هو المصدر الأصلي دون تعديل
+(عدا إضافة searx/version_frozen.py). المجلد android-python/ يحتوي بدائل لحزم لا تتوفر على أندرويد.
