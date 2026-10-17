@@ -1224,6 +1224,78 @@ final class BrowserView extends FrameLayout {
         toast(Theme.s("Browsing data deleted", "تم مسح البيانات"));
     }
 
+
+    // =====================================================================
+    //  إعدادات البحث (Seekr) تُحفظ في كوكيز الخادم المحلي — بلا مغادرة صفحة الإعدادات
+    // =====================================================================
+    String prefGet(String name, String def) {
+        String all = CookieManager.getInstance().getCookie(base);
+        if (all == null) return def;
+        for (String part : all.split(";")) {
+            String p = part.trim();
+            int i = p.indexOf('=');
+            if (i > 0 && p.substring(0, i).equals(name)) {
+                String v = p.substring(i + 1);
+                if (v.length() >= 2 && v.startsWith("\"") && v.endsWith("\"")) v = v.substring(1, v.length() - 1);
+                return v;
+            }
+        }
+        return def;
+    }
+
+    void prefSet(String name, String value) {
+        String v = (value.indexOf(' ') >= 0 || value.indexOf(',') >= 0) ? "\"" + value + "\"" : value;
+        CookieManager cm = CookieManager.getInstance();
+        cm.setCookie(base, name + "=" + v + "; Path=/; Max-Age=31536000");
+        cm.flush();
+    }
+
+    void resetSearchPrefs() {
+        CookieManager cm = CookieManager.getInstance();
+        String[] names = {"language", "safesearch", "autocomplete", "image_proxy", "disabled_engines", "enabled_engines",
+                "categories", "method", "favicon_resolver", "preferences"};
+        for (String n : names) cm.setCookie(base, n + "=; Path=/; Max-Age=0");
+        cm.flush();
+    }
+
+    List<String[]> engineCache;
+
+    /** يجلب قائمة المحركات من الخادم المحلي ثم ينفّذ onDone على خيط الواجهة. */
+    void loadEngines(final Runnable onDone) {
+        if (engineCache != null) { onDone.run(); return; }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final List<String[]> out = new ArrayList<>();
+                try {
+                    HttpURLConnection c = (HttpURLConnection) new URL(base + "/__api/engines").openConnection();
+                    c.setRequestProperty("Cookie", COOKIE + "=" + token);
+                    c.setConnectTimeout(4000);
+                    c.setReadTimeout(8000);
+                    BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), "UTF-8"));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = r.readLine()) != null) sb.append(line);
+                    r.close();
+                    JSONArray a = new JSONArray(sb.toString());
+                    for (int i = 0; i < a.length(); i++) {
+                        JSONObject o = a.getJSONObject(i);
+                        out.add(new String[]{o.getString("key"), o.getString("name"), o.getString("cat"), o.getBoolean("on") ? "1" : "0"});
+                    }
+                } catch (Throwable ignored) { }
+                ui.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!out.isEmpty()) engineCache = out;
+                        onDone.run();
+                    }
+                });
+            }
+        }, "seekr-engines").start();
+    }
+
+    void showEngines() { pushPage(Pages.engines(this)); }
+
     // =====================================================================
     //  التنزيلات
     // =====================================================================

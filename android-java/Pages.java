@@ -532,18 +532,40 @@ final class Pages {
         list.setOrientation(LinearLayout.VERTICAL);
         final Context c = b.act;
 
-        list.addView(sectionTitle(c, Theme.s("Search (Seekr)", "البحث (Seekr)")));
+        list.addView(sectionTitle(c, Theme.s("Search engine (Seekr)", "محرك البحث (Seekr)")));
         list.addView(settingRow(c, Theme.s("Search engines", "محركات البحث"), Theme.s("Choose which engines Seekr queries", "اختر المحركات التي يستعلم منها Seekr"), null, new Runnable() {
-            @Override public void run() { b.loadInCurrent(b.base + "/preferences#s-engines"); }
+            @Override public void run() { b.showEngines(); }
         }));
-        list.addView(settingRow(c, Theme.s("Language, SafeSearch, autocomplete", "اللغة والبحث الآمن والإكمال التلقائي"), Theme.s("Search language and suggestions", "لغة البحث والاقتراحات"), null, new Runnable() {
-            @Override public void run() { b.loadInCurrent(b.base + "/preferences#s-general"); }
+        final String[] sLang = {"auto", "all", "ar", "en", "fr", "de", "es", "it", "pt", "ru", "tr", "fa", "zh", "ja", "ko", "nl", "pl", "hi", "id"};
+        final String[] sLangN = {Theme.s("Detect automatically", "الاكتشاف التلقائي"), Theme.s("Any language", "أي لغة"), "العربية", "English", "Français", "Deutsch", "Español",
+                "Italiano", "Português", "Русский", "Türkçe", "فارسی", "中文", "日本語", "한국어", "Nederlands", "Polski", "हिन्दी", "Indonesia"};
+        list.addView(prefChoiceRow(b, Theme.s("Search language", "لغة البحث"), "language", "auto", sLang, sLangN));
+        final String[] ssV = {"0", "1", "2"};
+        final String[] ssN = {Theme.s("Off", "متوقف"), Theme.s("Moderate", "معتدل"), Theme.s("Strict", "صارم")};
+        list.addView(prefChoiceRow(b, Theme.s("SafeSearch", "البحث الآمن"), "safesearch", "0", ssV, ssN));
+        final String[] acV = {"", "duckduckgo", "google", "brave", "startpage", "wikipedia", "qwant", "yandex", "swisscows"};
+        final String[] acN = {Theme.s("Off", "متوقف"), "DuckDuckGo", "Google", "Brave", "Startpage", "Wikipedia", "Qwant", "Yandex", "Swisscows"};
+        list.addView(prefChoiceRow(b, Theme.s("Autocomplete", "الإكمال التلقائي"), "autocomplete", "duckduckgo", acV, acN));
+        final Toggle imgProxy = new Toggle(c, "1".equals(b.prefGet("image_proxy", "1")), new Toggle.Listener() {
+            @Override public void onToggle(boolean on) { b.prefSet("image_proxy", on ? "1" : "0"); }
+        });
+        list.addView(settingRow(c, Theme.s("Image proxy", "وكيل الصور"), Theme.s("Load result images through Seekr to hide your IP", "تحميل صور النتائج عبر Seekr لإخفاء عنوانك"), imgProxy, new Runnable() {
+            @Override public void run() { imgProxy.toggle(); }
         }));
-        list.addView(settingRow(c, Theme.s("Search privacy", "خصوصية البحث"), Theme.s("HTTP method, image proxy", "طريقة HTTP ووكيل الصور"), null, new Runnable() {
-            @Override public void run() { b.loadInCurrent(b.base + "/preferences#s-privacy"); }
-        }));
-        list.addView(settingRow(c, Theme.s("All search settings", "كل إعدادات البحث"), Theme.s("Cookies, special queries, reset", "ملفات الارتباط والاستعلامات الخاصة وإعادة الضبط"), null, new Runnable() {
-            @Override public void run() { b.loadInCurrent(b.base + "/preferences"); }
+        list.addView(settingRow(c, Theme.s("Reset search settings", "إعادة ضبط إعدادات البحث"), Theme.s("Engines, language, SafeSearch and autocomplete", "المحركات واللغة والبحث الآمن والإكمال التلقائي"), null, new Runnable() {
+            @Override
+            public void run() {
+                b.dlg().setTitle(Theme.s("Reset search settings?", "إعادة ضبط إعدادات البحث؟"))
+                        .setPositiveButton(Theme.s("Reset", "إعادة الضبط"), new android.content.DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(android.content.DialogInterface d, int w) {
+                                b.resetSearchPrefs();
+                                b.toast(Theme.s("Search settings reset", "تمت إعادة الضبط"));
+                                b.popPage();
+                                b.showSettings();
+                            }
+                        }).setNegativeButton(Theme.s("Cancel", "إلغاء"), null).show();
+            }
         }));
 
         list.addView(sectionTitle(c, Theme.s("Appearance", "المظهر واللغة")));
@@ -643,6 +665,148 @@ final class Pages {
         ScrollView sv = new ScrollView(b.act);
         sv.addView(list, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         page.addView(sv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        return page;
+    }
+
+
+    /** صف إعداد باختيار من قائمة، قيمته محفوظة في كوكي خادم Seekr. */
+    private static View prefChoiceRow(final BrowserView b, final String title, final String cookie, final String def,
+                                      final String[] values, final String[] names) {
+        String cur = b.prefGet(cookie, def);
+        int idx = 0;
+        for (int i = 0; i < values.length; i++) if (values[i].equals(cur)) idx = i;
+        final TextView[] summary = new TextView[1];
+        final View row = settingRow(b.act, title, names[idx], null, null);
+        LinearLayout col = (LinearLayout) ((LinearLayout) row).getChildAt(0);
+        summary[0] = (TextView) col.getChildAt(1);
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String c2 = b.prefGet(cookie, def);
+                int sel = 0;
+                for (int i = 0; i < values.length; i++) if (values[i].equals(c2)) sel = i;
+                b.dlg().setTitle(title).setSingleChoiceItems(names, sel, new android.content.DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(android.content.DialogInterface d, int which) {
+                        b.prefSet(cookie, values[which]);
+                        summary[0].setText(names[which]);
+                        d.dismiss();
+                    }
+                }).show();
+            }
+        });
+        return row;
+    }
+
+    private static String catLabel(String cat) {
+        switch (cat) {
+            case "general": return Theme.s("General", "عام");
+            case "images": return Theme.s("Images", "صور");
+            case "videos": return Theme.s("Videos", "فيديوهات");
+            case "news": return Theme.s("News", "أخبار");
+            case "map": return Theme.s("Maps", "خرائط");
+            case "music": return Theme.s("Music", "موسيقى");
+            case "it": return Theme.s("IT", "تقنية");
+            case "science": return Theme.s("Science", "علوم");
+            case "files": return Theme.s("Files", "ملفات");
+            case "social media": return Theme.s("Social media", "التواصل الاجتماعي");
+            default: return Theme.s("Other", "أخرى");
+        }
+    }
+
+    private static java.util.ArrayList<String> csv(String s) {
+        java.util.ArrayList<String> out = new java.util.ArrayList<>();
+        if (s == null) return out;
+        for (String p : s.split(",")) if (!p.trim().isEmpty()) out.add(p.trim());
+        return out;
+    }
+
+    /** صفحة محركات البحث: مفتاح لكل محرك، مجمّعة حسب القسم. */
+    static View engines(final BrowserView b) {
+        final LinearLayout page = pageRoot(b.act);
+        final EditText search = new EditText(b.act);
+        final LinearLayout list = new LinearLayout(b.act);
+        list.setOrientation(LinearLayout.VERTICAL);
+        final Runnable[] render = new Runnable[1];
+        render[0] = new Runnable() {
+            @Override
+            public void run() {
+                list.removeAllViews();
+                if (b.engineCache == null) {
+                    TextView t = U.tv(b.act, Theme.s("Loading…", "جارٍ التحميل…"), 16, Theme.dim);
+                    t.setGravity(Gravity.CENTER);
+                    t.setPadding(0, Theme.dp(60), 0, 0);
+                    list.addView(t);
+                    return;
+                }
+                String q = search.getText().toString().trim().toLowerCase();
+                java.util.ArrayList<String> en = csv(b.prefGet("enabled_engines", ""));
+                java.util.ArrayList<String> dis = csv(b.prefGet("disabled_engines", ""));
+                String lastCat = "";
+                for (final String[] e : b.engineCache) {
+                    if (!q.isEmpty() && !e[1].toLowerCase().contains(q)) continue;
+                    if (!e[2].equals(lastCat)) {
+                        list.addView(sectionTitle(b.act, catLabel(e[2])));
+                        lastCat = e[2];
+                    }
+                    final boolean def = "1".equals(e[3]);
+                    boolean on = def;
+                    if (en.contains(e[0])) on = true;
+                    if (dis.contains(e[0])) on = false;
+                    final Toggle tg = new Toggle(b.act, on, new Toggle.Listener() {
+                        @Override
+                        public void onToggle(boolean now) {
+                            java.util.ArrayList<String> en2 = csv(b.prefGet("enabled_engines", ""));
+                            java.util.ArrayList<String> dis2 = csv(b.prefGet("disabled_engines", ""));
+                            en2.remove(e[0]);
+                            dis2.remove(e[0]);
+                            if (now != def) { if (now) en2.add(e[0]); else dis2.add(e[0]); }
+                            b.prefSet("enabled_engines", android.text.TextUtils.join(",", en2));
+                            b.prefSet("disabled_engines", android.text.TextUtils.join(",", dis2));
+                        }
+                    });
+                    list.addView(settingRow(b.act, e[1], null, tg, new Runnable() {
+                        @Override public void run() { tg.toggle(); }
+                    }));
+                }
+            }
+        };
+
+        ImageView searchBtn = U.ibtn(b.act, Ico.SEARCH, Theme.text, new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (search.getVisibility() == View.VISIBLE) {
+                    search.setText("");
+                    search.setVisibility(View.GONE);
+                    b.hideIme();
+                } else {
+                    search.setVisibility(View.VISIBLE);
+                    search.requestFocus();
+                    b.showIme(search);
+                }
+            }
+        });
+        page.addView(header(b, Theme.s("Search engines", "محركات البحث"), searchBtn));
+        search.setHint(Theme.s("Search engines", "بحث في المحركات"));
+        search.setSingleLine(true);
+        search.setTextColor(Theme.text);
+        search.setHintTextColor(Theme.dim);
+        search.setBackground(Theme.round(Theme.pill, 24));
+        search.setPadding(Theme.dp(18), 0, Theme.dp(18), 0);
+        search.setVisibility(View.GONE);
+        LinearLayout.LayoutParams sl = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Theme.dp(48));
+        sl.setMargins(Theme.dp(16), 0, Theme.dp(16), Theme.dp(8));
+        page.addView(search, sl);
+        search.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int c, int d) {}
+            @Override public void onTextChanged(CharSequence s, int a, int c, int d) {}
+            @Override public void afterTextChanged(Editable e) { render[0].run(); }
+        });
+        ScrollView sv = new ScrollView(b.act);
+        sv.addView(list, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        page.addView(sv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        render[0].run();
+        b.loadEngines(render[0]);
         return page;
     }
 

@@ -83,6 +83,21 @@ def _prepare_settings(data_dir: str, port: int) -> str:
     return path
 
 
+def _engines_json() -> str:
+    """قائمة المحركات (للإعدادات الأصلية في التطبيق): [{key, name, cat, on}] — on = مفعّل افتراضيًا."""
+    from searx import settings  # pylint: disable=import-outside-toplevel
+    from searx.engines import DEFAULT_CATEGORY, engines  # pylint: disable=import-outside-toplevel
+
+    allowed = list(settings["categories_as_tabs"].keys()) + [DEFAULT_CATEGORY]
+    out = []
+    for eng in engines.values():
+        for cat in eng.categories:
+            if cat in allowed:
+                out.append({"key": f"{eng.name}__{cat}", "name": eng.name, "cat": cat, "on": not eng.disabled})
+    out.sort(key=lambda e: (e["cat"], e["name"].lower()))
+    return json.dumps(out, ensure_ascii=False)
+
+
 def _guard(app):
     """WSGI: يتحقق من الكوكي، ويضيف X-Real-IP لتفادي رسائل خطأ كاشف الروبوتات."""
 
@@ -116,6 +131,11 @@ def _guard(app):
         if morsel is None or not hmac.compare_digest(morsel.value, _TOKEN):
             start_response("403 Forbidden", [("Content-Type", "text/plain"), ("Content-Length", "9")])
             return [b"Forbidden"]
+
+        if path == "/__api/engines":
+            body = _engines_json().encode("utf-8")
+            start_response("200 OK", [("Content-Type", "application/json; charset=utf-8"), ("Content-Length", str(len(body)))])
+            return [body]
 
         environ["HTTP_X_REAL_IP"] = environ.get("REMOTE_ADDR") or "127.0.0.1"
         return app(environ, start_response)
