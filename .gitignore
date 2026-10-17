@@ -1,8 +1,0 @@
-node_modules/
-android/
-*.keystore
-*.jks
-*.b64
-__pycache__/
-*.pyc
-.DS_Store
