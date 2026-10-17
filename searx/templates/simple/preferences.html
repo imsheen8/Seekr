@@ -19,6 +19,42 @@
 </div>
 {%- endmacro -%}
 
+{#- نصوص ثنائية اللغة للعناوين الجديدة (لا توجد لها ترجمات في كتالوج gettext) -#}
+{%- macro tr(en, ar) -%}{{- ar if locale_rfc5646.startswith('ar') else en -}}{%- endmacro -%}
+
+{#- شريط التطبيق العلوي على طراز كروم: سهم رجوع + عنوان + أيقونة مساعدة -#}
+{%- macro appbar(title, root) -%}
+<header class="s-bar">{{- '' -}}
+  {%- if root -%}
+    <a class="s-icon-btn back-arrow" href="{{ url_for('index') }}" aria-label="{{ _('Back') }}">{{ icon_big('navigate-left') }}</a>
+  {%- else -%}
+    <a class="s-icon-btn back-arrow s-back" href="#" aria-label="{{ _('Back') }}">{{ icon_big('navigate-left') }}</a>
+  {%- endif -%}
+  <h1>{{ title }}</h1>{{- '' -}}
+  <a class="s-icon-btn s-help" href="{{ url_for('info', pagename='about') }}" aria-label="{{ tr('Help', 'مساعدة') }}">{{- '' -}}
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>{{- '' -}}
+  </a>{{- '' -}}
+</header>
+{%- endmacro -%}
+
+{%- macro page_open(id, title) -%}
+<section class="s-page" id="s-{{ id }}" aria-label="{{ title }}">
+  {{- appbar(title) -}}
+  <div class="s-body">
+{%- endmacro -%}
+
+{%- macro page_close() -%}
+  </div>
+</section>
+{%- endmacro -%}
+
+{%- macro index_row(id, title, subtitle) -%}
+<a class="s-row" href="#s-{{ id }}">{{- '' -}}
+  <span class="s-t">{{ title }}</span>
+  {%- if subtitle -%}<span class="s-s">{{ subtitle }}</span>{%- endif -%}
+</a>
+{%- endmacro -%}
+
 {%- macro checkbox(name, checked, disabled) -%}
   {%- if checked == '?' -%}
     {{- icon_small('alert') -}}
@@ -149,24 +185,55 @@
 
 {%- block content -%}
 
-  <h1><a class="back-arrow" href="{{ url_for('index') }}" aria-label="{{ _('Back') }}">{{ icon_big('navigate-left') }}</a>{{ _('Preferences') }}</h1>
+  {#- ===== الصفحة الرئيسية للإعدادات: مجموعات بطاقية (مثل كروم) ===== -#}
+  <div class="s-index">
+    {{- appbar(_('Preferences'), true) -}}
+    <div class="s-body">
 
-  {%- if request.args.get('preferences_preview_only') == 'true' -%}
-    <div class="dialog-warning-block">
-      <p>{{ _("This is a preview of the settings used by the 'Search URL' you used to get here.") }}</p>
-      <ul>
-        <li>{{ _('Press save to copy these preferences to your browser.') }}</li>
-        <li>{{ _('Click here to view your browser preferences instead:') }} <a href="{{ url_for('preferences') }}">/preferences</a></li>
-      </ul>
+      {%- if request.args.get('preferences_preview_only') == 'true' -%}
+        <div class="dialog-warning-block">
+          <p>{{ _("This is a preview of the settings used by the 'Search URL' you used to get here.") }}</p>
+          <ul>
+            <li>{{ _('Press save to copy these preferences to your browser.') }}</li>
+            <li>{{ _('Click here to view your browser preferences instead:') }} <a href="{{ url_for('preferences') }}">/preferences</a></li>
+          </ul>
+        </div>
+      {%- endif -%}
+
+      <h2 class="s-section">{{ tr('Basics', 'الأساسيات') }}</h2>
+      <div class="s-group">
+        {{- index_row('general', _('General'), tr('Search language, SafeSearch, autocomplete', 'لغة البحث، البحث الآمن، الإكمال التلقائي')) -}}
+        {{- index_row('ui', _('User interface'), _(preferences.get_value('simple_style') or 'auto') | capitalize) -}}
+        {{- index_row('privacy', _('Privacy'), tr('HTTP method, image proxy', 'طريقة HTTP، وكيل الصور')) -}}
+      </div>
+
+      <h2 class="s-section">{{ tr('Advanced', 'متقدم') }}</h2>
+      <div class="s-group">
+        {{- index_row('engines', _('Engines'), _('Currently used search engines')) -}}
+        {%- if answer_storage -%}
+          {{- index_row('query', _('Special Queries')) -}}
+        {%- endif -%}
+        {{- index_row('cookies', _('Cookies')) -}}
+        <a class="s-row" href="{{ url_for('clear_cookies') }}">
+          <span class="s-t">{{ _('Reset defaults') }}</span>
+        </a>
+      </div>
+
+      <h2 class="s-section">{{ tr('About', 'حول') }}</h2>
+      <div class="s-group">
+        <a class="s-row" href="{{ url_for('info', pagename='about') }}">
+          <span class="s-t">{{ tr('About Seekr', 'حول Seekr') }}</span>
+          <span class="s-s">{{ searxng_version }}</span>
+        </a>
+      </div>
     </div>
-  {%- endif -%}
+  </div>
 
   <form id="search_form" method="post" action="{{ url_for('preferences') }}" autocomplete="off">
-    {{- tabs_open() -}}
 
-    {# tab: general #}
+    {# page: general #}
 
-    {{- tab_header('maintab', 'general', _('General'), True) -}}
+    {{- page_open('general', _('General')) -}}
     {%- if 'categories' not in locked_preferences -%}
       <fieldset>
         <legend>{{- _('Default categories') -}}</legend>
@@ -193,11 +260,11 @@
       {%- include 'simple/preferences/tokens.html' -%}
     {%- endif -%}
     {{- plugin_preferences('general') -}}
-    {{- tab_footer() -}}
+    {{- page_close() -}}
 
-    {# tab: ui #}
+    {# page: ui #}
 
-    {{- tab_header('maintab', 'ui', _('User interface')) -}}
+    {{- page_open('ui', _('User interface')) -}}
     {%- if 'locale' not in locked_preferences -%}
       {%- include 'simple/preferences/ui_locale.html' -%}
     {%- endif -%}
@@ -213,11 +280,11 @@
     {%- include 'simple/preferences/hotkeys.html' -%}
     {%- include 'simple/preferences/urlformatting.html' -%}
     {{- plugin_preferences('ui') -}}
-    {{- tab_footer() -}}
+    {{- page_close() -}}
 
-    {# tab: privacy #}
+    {# page: privacy #}
 
-    {{- tab_header('maintab', 'privacy', _('Privacy')) -}}
+    {{- page_open('privacy', _('Privacy')) -}}
     {%- if 'method' not in locked_preferences -%}
       {%- include 'simple/preferences/method.html' -%}
     {%- endif -%}
@@ -228,37 +295,77 @@
       {%- include 'simple/preferences/query_in_title.html' -%}
     {%- endif -%}
     {{- plugin_preferences('privacy') -}}
-    {{- tab_footer() -}}
+    {{- page_close() -}}
 
-    {# tab: enignes #}
+    {# page: engines (تبويبات داخلية للفئات) #}
 
-    {{- tab_header('maintab', 'engines', _('Engines')) -}}
-    <p>
-      {{- _('Currently used search engines') -}}
-    </p>
+    {{- page_open('engines', _('Engines')) -}}
     {{- tabs_open() -}}
     {%- include 'simple/preferences/engines.html' -%}
     {{- tabs_close() -}}
-    {{- tab_footer() -}}
+    {{- page_close() -}}
 
-    {# tab: query #}
+    {# page: query #}
 
-    {{- tab_header('maintab', 'query', _('Special Queries')) -}}
     {%- if answer_storage -%}
+      {{- page_open('query', _('Special Queries')) -}}
       {%- include 'simple/preferences/answerers.html' -%}
+      {{- page_close() -}}
     {%- endif -%}
-    {{- tab_footer() -}}
 
-    {# tab: cookies #}
+    {# page: cookies #}
 
-    {{- tab_header('maintab', 'cookies', _('Cookies')) -}}
+    {{- page_open('cookies', _('Cookies')) -}}
     {%- include 'simple/preferences/cookies.html' -%}
-    {{- tab_footer() -}}
-    {{- tabs_close() -}}
+    {{- page_close() -}}
 
-    {# footer with save & reset buttons #}
+    {# شريط الحفظ وإعادة الضبط (يظهر داخل الصفحات الفرعية فقط) #}
 
     {%- include 'simple/preferences/footer.html' -%}
 
   </form>{{- '' -}}
+
+  <script>
+  (function () {
+    var root = document.documentElement;
+    root.classList.add('s-js');
+    var main = document.getElementById('main_preferences');
+    if (!main) { return; }
+
+    /* سهم الرجوع داخل الصفحة الفرعية: يعود في السجل (زر الرجوع في أندرويد يعمل بنفس الطريقة) */
+    main.querySelectorAll('.s-back').forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        if (location.hash && history.length > 1) { e.preventDefault(); history.back(); }
+      });
+    });
+
+    main.querySelectorAll('fieldset').forEach(function (fs) {
+      var sel = fs.querySelector('select');
+      if (sel) {
+        /* صف اختيار: العنوان + القيمة الحالية كسطر ثانٍ، والنقر يفتح قائمة الاختيار الأصلية */
+        fs.classList.add('s-select');
+        var v = document.createElement('div');
+        v.className = 's-val';
+        var upd = function () {
+          var o = sel.options[sel.selectedIndex];
+          v.textContent = o ? o.text.replace(/\s+/g, ' ').trim() : '';
+        };
+        upd();
+        sel.addEventListener('change', upd);
+        var d = fs.querySelector('.description');
+        if (d) { fs.insertBefore(v, d); } else { fs.appendChild(v); }
+        return;
+      }
+      var cb = fs.querySelector('input.checkbox-onoff');
+      if (cb) {
+        /* صف مفتاح: النقر على الصف كله يبدّل المفتاح */
+        fs.classList.add('s-toggle');
+        fs.addEventListener('click', function (e) {
+          if (e.target.closest('input, a, label, button')) { return; }
+          cb.click();
+        });
+      }
+    });
+  })();
+  </script>
 {%- endblock -%}
