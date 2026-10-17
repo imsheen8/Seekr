@@ -1,16 +1,4 @@
-<fieldset>{{- '' -}}
-  <legend id="pref_ui_locale">{{- _('Interface language') -}}</legend>{{- '' -}}
-  <div class="value">{{- '' -}}
-    <select name='locale' aria-labelledby="pref_ui_locale">{{- '' -}}
-      {%- for locale_id,locale_name in locales.items() | sort -%}
-        <option value="{{ locale_id }}"
-                {%- if locale_id == current_locale %} selected="selected" {%- endif %}>
-                {{- locale_name -}}
-        </option>{{- '' -}}
-      {%- endfor -%}
-    </select>{{- '' -}}
-  </div>{{- '' -}}
-  <div class="description">
-    {{- _('Change the language of the layout') -}}
-  </div>{{- '' -}}
-</fieldset>{{- '' -}}
+{%- from 'simple/preferences/_cs.html' import select_row, option -%}
+{%- call select_row('locale', _('Interface language'), _('Change the language of the layout')) -%}
+  {%- for locale_id,locale_name in locales.items() | sort -%}{{- option(locale_id, locale_name, locale_id == current_locale) -}}{%- endfor -%}
+{%- endcall -%}

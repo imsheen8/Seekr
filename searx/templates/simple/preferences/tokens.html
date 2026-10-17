@@ -1,11 +1,2 @@
-<fieldset>{{- '' -}}
-  <legend id="pref_tokens">{{- _('Engine tokens') -}}</legend>{{- '' -}}
-  <div class="value">{{- '' -}}
-    <input name="tokens" aria-labelledby="pref_tokens" type="text"
-           autocomplete="off" spellcheck="false" autocorrect="off"
-           value='{{ preferences.tokens.get_value() }}'>{{- '' -}}
-  </div>{{- '' -}}
-  <div class="description">
-    {{- _('Access tokens for private engines') -}}
-  </div>{{- '' -}}
-</fieldset>{{- '' -}}
+{%- from 'simple/preferences/_cs.html' import text_row -%}
+{{- text_row('tokens', _('Engine tokens'), _('Access tokens for private engines'), preferences.tokens.get_value()) -}}

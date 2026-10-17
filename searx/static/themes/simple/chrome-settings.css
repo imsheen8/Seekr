@@ -1,0 +1,177 @@
+/* =====================================================================
+   Seekr — صفحة الإعدادات على طراز Chrome للأندرويد (Material 3)
+   ملف مستقل: يُحمَّل في preferences.html فقط. كل الأصناف بادئتها cs-
+   ===================================================================== */
+
+/* ---------- الألوان ---------- */
+:root {
+  --s-bg: #fff8f6; --s-card: #f8ebe6; --s-card-press: #efdcd5; --s-text: #231917; --s-muted: #53433f; --s-section: #77574e;
+  --s-accent: #8f4c38; --s-on-accent: #ffffff; --s-outline: #85736e; --s-chip: #ffdbd0; --s-on-chip: #3a0b01;
+  --s-ripple: rgba(143, 76, 56, .12); --s-code: #f1e0da; --s-scrim: rgba(0, 0, 0, .32);
+}
+@media (prefers-color-scheme: dark) {
+  :root.theme-auto {
+    --s-bg: #322924; --s-card: #423733; --s-card-press: #54463f; --s-text: #f1dfd9; --s-muted: #d8c2b9; --s-section: #e7bdb2;
+    --s-accent: #ffb59a; --s-on-accent: #5a1c00; --s-outline: #a08d85; --s-chip: #5d4037; --s-on-chip: #ffdbd0;
+    --s-ripple: rgba(255, 181, 154, .16); --s-code: #2b211d; --s-scrim: rgba(0, 0, 0, .55);
+  }
+}
+:root.theme-dark, :root.theme-black {
+  --s-bg: #322924; --s-card: #423733; --s-card-press: #54463f; --s-text: #f1dfd9; --s-muted: #d8c2b9; --s-section: #e7bdb2;
+  --s-accent: #ffb59a; --s-on-accent: #5a1c00; --s-outline: #a08d85; --s-chip: #5d4037; --s-on-chip: #ffdbd0;
+  --s-ripple: rgba(255, 181, 154, .16); --s-code: #2b211d; --s-scrim: rgba(0, 0, 0, .55);
+}
+:root.theme-black { --s-bg: #000; --s-card: #1e1816; --s-card-press: #2c2320; --s-code: #120d0b; }
+
+body.preferences_endpoint { background: var(--s-bg); color: var(--s-text); }
+body.preferences_endpoint footer { background: transparent; }
+body.preferences_endpoint footer p, body.preferences_endpoint footer a { color: var(--s-muted); }
+
+/* ---------- الهيكل ---------- */
+#main_preferences { max-width: 760px; margin-inline: auto; padding: 0 0 24px; color: var(--s-text); font-family: var(--font); }
+#main_preferences > a:has(> img.logo), #main_preferences > nav#links_on_top { display: none; }
+#main_preferences .cs-body { padding: 0 16px; }
+#main_preferences .cs-page { display: none; }
+#main_preferences .cs-page:target { display: block; padding-bottom: 96px; }
+#main_preferences:has(.cs-page:target) .cs-index { display: none; }
+
+/* ---------- شريط التطبيق ---------- */
+#main_preferences .cs-bar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 8px; height: 64px; padding: 0 8px; background: var(--s-bg); }
+#main_preferences .cs-bar h1 {
+  flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; font-size: 1.375rem; font-weight: 400; line-height: 1.2; color: var(--s-text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; position: static; background: none; display: block;
+}
+#main_preferences .cs-icon {
+  flex: 0 0 auto; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; color: var(--s-text);
+  -webkit-tap-highlight-color: transparent;
+}
+#main_preferences .cs-icon:active { background: var(--s-ripple); }
+#main_preferences .cs-icon svg { width: 24px; height: 24px; stroke-width: 2; }
+[dir=rtl] #main_preferences .back-arrow svg { transform: scaleX(-1); }
+
+/* ---------- شريط "البحث في الإعدادات" ---------- */
+#main_preferences .cs-search { display: none; align-items: center; gap: 12px; height: 56px; margin: 4px 0 8px; padding: 0 20px; background: var(--s-card); border-radius: 28px; color: var(--s-muted); }
+.cs-js #main_preferences .cs-search { display: flex; }
+#main_preferences .cs-search svg { width: 22px; height: 22px; flex: 0 0 auto; }
+#main_preferences .cs-search input {
+  flex: 1 1 auto; min-width: 0; height: 100%; padding: 0; border: none; border-radius: 0; background: transparent; color: var(--s-text);
+  font-size: 1rem; font-family: var(--font); box-shadow: none; outline: none;
+}
+#main_preferences .cs-search input::placeholder { color: var(--s-muted); opacity: 1; }
+#main_preferences #cs-results[hidden] { display: none; }
+
+/* ---------- عناوين الأقسام والمجموعات والصفوف ---------- */
+#main_preferences .cs-section, #main_preferences h2.cs-section {
+  margin: 24px 16px 8px; padding: 0; font-size: .875rem; font-weight: 500; line-height: 1.4; letter-spacing: .1px; color: var(--s-section); font-family: var(--font);
+}
+#main_preferences .cs-bang { font-weight: 400; color: var(--s-muted); }
+#main_preferences .cs-body > .cs-group:first-child, #main_preferences .cs-body > .cs-tabs { margin-top: 8px; }
+
+#main_preferences .cs-group { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
+#main_preferences .cs-row {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; box-sizing: border-box;
+  min-height: 56px; padding: 14px 20px; background: var(--s-card); color: var(--s-text); border-radius: 4px;
+  -webkit-tap-highlight-color: transparent; cursor: pointer; text-decoration: none;
+}
+#main_preferences .cs-group > .cs-row:first-child { border-radius: 24px 24px 4px 4px; }
+#main_preferences .cs-group > .cs-row:last-child { border-radius: 4px 4px 24px 24px; }
+#main_preferences .cs-group > .cs-row:only-child { border-radius: 24px; }
+#main_preferences .cs-link:active, #main_preferences .cs-select:active, #main_preferences .cs-switch:active { background: var(--s-card-press); }
+#main_preferences .cs-info, #main_preferences .cs-chips, #main_preferences .cs-field { cursor: default; }
+
+#main_preferences .cs-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: start; }
+#main_preferences .cs-title { font-size: 1rem; line-height: 1.4; color: var(--s-text); overflow-wrap: anywhere; }
+#main_preferences .cs-sub { font-size: .875rem; line-height: 1.45; color: var(--s-muted); overflow-wrap: anywhere; }
+#main_preferences .cs-sub:empty { display: none; }
+#main_preferences .cs-sub.cs-wrap { word-break: break-all; }
+#main_preferences .cs-desc { font-size: .875rem; line-height: 1.5; color: var(--s-muted); }
+#main_preferences .cs-select .cs-desc { display: none; }
+
+/* صف الاختيار: القائمة الأصلية شفافة فوق الصف كله */
+#main_preferences .cs-select select {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; opacity: 0; border: 0; border-radius: inherit;
+  background: transparent; color: var(--s-text); font-size: 1rem; cursor: pointer; -webkit-appearance: none; appearance: none;
+}
+
+/* صف حقل نصي */
+#main_preferences .cs-field { flex-direction: column; align-items: stretch; gap: 10px; }
+#main_preferences .cs-field input[type="text"] {
+  width: 100%; box-sizing: border-box; height: 48px; padding: 0 14px; border: 1px solid var(--s-outline); border-radius: 8px;
+  background: transparent; color: var(--s-text); font-size: 1rem; font-family: var(--font);
+}
+#main_preferences .cs-field input[type="text"]:focus { border-color: var(--s-accent); box-shadow: inset 0 0 0 1px var(--s-accent); outline: none; }
+
+/* ---------- مفتاح التبديل Material 3 ---------- */
+#main_preferences .cs-sw {
+  -webkit-appearance: none; appearance: none; position: relative; flex: 0 0 auto; display: block; box-sizing: border-box;
+  width: 52px; height: 32px; margin: 0; padding: 0; border-radius: 16px; cursor: pointer;
+  background: transparent; border: 2px solid var(--s-outline); transition: background .15s, border-color .15s;
+}
+#main_preferences .cs-sw::after {
+  content: ""; position: absolute; top: 50%; inset-inline-start: 6px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--s-outline); transform: translateY(-50%); transition: all .15s;
+}
+#main_preferences .cs-sw:checked { background: var(--s-accent); border-color: var(--s-accent); }
+#main_preferences .cs-sw:checked::after { inset-inline-start: 24px; width: 24px; height: 24px; background: var(--s-on-accent); }
+/* معكوس (المحدّد = معطَّل) */
+#main_preferences .cs-sw.cs-rev:checked { background: transparent; border-color: var(--s-outline); }
+#main_preferences .cs-sw.cs-rev:checked::after { inset-inline-start: 6px; width: 16px; height: 16px; background: var(--s-outline); }
+#main_preferences .cs-sw.cs-rev:not(:checked) { background: var(--s-accent); border-color: var(--s-accent); }
+#main_preferences .cs-sw.cs-rev:not(:checked)::after { inset-inline-start: 24px; width: 24px; height: 24px; background: var(--s-on-accent); }
+
+/* ---------- الشرائح (Filter chips) ---------- */
+#main_preferences .cs-tab-r { display: none; }
+#main_preferences .cs-chips { flex-direction: column; align-items: stretch; gap: 12px; }
+#main_preferences .cs-chiplist, #main_preferences .cs-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+#main_preferences .cs-chip {
+  order: 1; flex: 0 0 auto; display: inline-flex; align-items: center; height: 32px; margin: 0; padding: 0 14px; box-sizing: border-box;
+  border: 1px solid var(--s-outline); border-radius: 8px; background: transparent; color: var(--s-text);
+  font-size: .875rem; font-weight: 500; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+#main_preferences .cs-tab-r:checked + .cs-chip { background: var(--s-chip); border-color: transparent; color: var(--s-on-chip); }
+/* لوحات فئات المحركات: واحدة ظاهرة حسب الشريحة المحددة */
+#main_preferences .cs-panel { order: 2; flex: 0 0 100%; min-width: 100%; display: none; padding-top: 4px; }
+#main_preferences .cs-tab-r:checked + .cs-chip + .cs-panel { display: block; }
+
+/* ---------- أزرار ---------- */
+#main_preferences .cs-btns { display: flex; gap: 8px; margin: 8px 0 4px; }
+#main_preferences .cs-btn {
+  height: 40px; padding: 0 20px; border: none; border-radius: 20px; background: var(--s-chip); color: var(--s-on-chip);
+  font-size: .875rem; font-weight: 500; font-family: var(--font); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+#main_preferences .cs-btn:active { filter: brightness(.92); }
+#main_preferences .cs-text-btn { display: inline-grid; place-items: center; height: 40px; padding: 0 12px; border-radius: 20px; color: var(--s-accent); font-weight: 500; font-size: .9rem; }
+#main_preferences .cs-text-btn:active { background: var(--s-ripple); }
+
+/* ---------- نصوص وملاحظات وأكواد ---------- */
+#main_preferences .cs-note { margin: 10px 16px; font-size: .8125rem; line-height: 1.6; color: var(--s-muted); }
+#main_preferences .cs-foot { text-align: center; margin-top: 20px; }
+#main_preferences .cs-code { margin: 0 0 8px; padding: 14px 16px; background: var(--s-card); border-radius: 20px; overflow-x: auto; }
+#main_preferences .cs-code pre { margin: 0; padding: 0; background: transparent; color: var(--s-text); font-size: .8rem; line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
+#main_preferences .cs-copy { display: flex; align-items: flex-start; gap: 8px; }
+#main_preferences .cs-copy .cs-code { flex: 1 1 auto; min-width: 0; }
+#main_preferences .cs-copy .cs-btn { margin-top: 4px; flex: 0 0 auto; }
+#main_preferences .dialog-warning-block { margin: 8px 0 12px; border-radius: 20px; background: var(--s-card); border: none; color: var(--s-text); }
+
+/* ---------- شريط الحفظ العائم ---------- */
+#main_preferences .cs-actions {
+  position: fixed; inset-inline: 0; bottom: 0; z-index: 30; display: none; justify-content: center; padding: 12px 16px 16px;
+  background: linear-gradient(to top, var(--s-bg) 70%, transparent); transition: transform .2s ease;
+}
+#main_preferences:has(.cs-page:target) .cs-actions { display: flex; }
+.cs-js #main_preferences .cs-actions { transform: translateY(120%); }
+.cs-js #main_preferences.cs-dirty .cs-actions { transform: none; }
+#main_preferences .cs-save {
+  width: 100%; max-width: 728px; height: 48px; padding: 0 24px; border: none; border-radius: 24px; background: var(--s-accent); color: var(--s-on-accent);
+  font-size: .95rem; font-weight: 500; font-family: var(--font); cursor: pointer; box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+}
+#main_preferences .cs-save:active { filter: brightness(.92); }
+
+/* ---------- نافذة التأكيد (Material dialog) ---------- */
+#main_preferences .cs-dialog { display: none; position: fixed; inset: 0; z-index: 50; align-items: center; justify-content: center; padding: 24px; }
+#main_preferences .cs-dialog:target { display: flex; }
+#main_preferences .cs-scrim { position: absolute; inset: 0; background: var(--s-scrim); }
+#main_preferences .cs-card { position: relative; width: 100%; max-width: 312px; padding: 24px; box-sizing: border-box; border-radius: 28px; background: var(--s-card); color: var(--s-text); }
+#main_preferences .cs-card h2 { margin: 0 0 12px; font-size: 1.5rem; font-weight: 400; line-height: 1.3; color: var(--s-text); }
+#main_preferences .cs-card p { margin: 0 0 20px; font-size: .9rem; line-height: 1.55; color: var(--s-muted); }
+#main_preferences .cs-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }

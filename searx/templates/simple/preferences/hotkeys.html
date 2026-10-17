@@ -1,23 +1,5 @@
-<fieldset>{{- '' -}}
-  <legend id="pref_hotkeys">{{- _('Hotkeys') -}}</legend>{{- '' -}}
-  <div class="value">{{- '' -}}
-    <select name="hotkeys" aria-labelledby="pref_hotkeys">{{- '' -}}
-      <option value="default"
-              {%- if hotkeys == 'default' %} selected="selected"
-              {%- endif -%}>
-              Seekr{{- '' -}}
-      </option>{{- '' -}}
-      <option value="vim"
-              {%- if hotkeys == 'vim' %} selected="selected"
-              {%- endif -%}>
-              {{- _('Vim-like') -}}
-        </option>{{- '' -}}
-    </select>{{- '' -}}
-  </div>{{- '' -}}
-  <div class="description">
-    {{- _(
-    'Navigate search results with hotkeys (JavaScript required). '
-    'Press "h" key on main or result page to get help.'
-    ) -}}
-  </div>{{- '' -}}
-</fieldset>{{- '' -}}
+{%- from 'simple/preferences/_cs.html' import select_row, option -%}
+{%- call select_row('hotkeys', _('Hotkeys'), _('Navigate search results with hotkeys (JavaScript required). Press "h" key on main or result page to get help.')) -%}
+  {{- option('default', 'Seekr', hotkeys == 'default') -}}
+  {{- option('vim', _('Vim-like'), hotkeys == 'vim') -}}
+{%- endcall -%}

@@ -1,17 +1,5 @@
-<fieldset>{{- '' -}}
-  <legend id="pref_favicon_resolver">{{- _('Favicon Resolver') -}}</legend>{{- '' -}}
-  <div class="value">{{- '' -}}
-    <select name="favicon_resolver" aria-labelledby="pref_favicon_resolver">{{- '' -}}
-      <option value=""> - </option>
-      {%- for backend in favicon_resolver_names -%}
-        <option value="{{ backend }}"
-          {%- if backend == favicon_resolver %} selected="selected" {%- endif -%}>
-          {{- backend -}}
-        </option>
-      {%- endfor -%}
-    </select>{{- '' -}}
-  </div>{{- '' -}}
-  <div class="description">
-    {{- _('Display favicons near search results') -}}
-  </div>{{- '' -}}
-</fieldset>{{- '' -}}
+{%- from 'simple/preferences/_cs.html' import select_row, option -%}
+{%- call select_row('favicon_resolver', _('Favicon Resolver'), _('Display favicons near search results')) -%}
+  {{- option('', '-', not favicon_resolver) -}}
+  {%- for backend in favicon_resolver_names -%}{{- option(backend, backend, backend == favicon_resolver) -}}{%- endfor -%}
+{%- endcall -%}

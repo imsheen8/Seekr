@@ -1,16 +1,2 @@
-<fieldset>{{- '' -}}
-  <legend id="pref_results_on_new_tab">{{ _('Results in new tabs') }}</legend>{{- '' -}}
-  <p class="value">{{- '' -}}
-    <input type="checkbox" {{- ' ' -}}
-           name="results_on_new_tab" {{- ' ' -}}
-           aria-labelledby="pref_results_on_new_tab" {{- ' ' -}}
-           class="checkbox-onoff" {{- ' ' -}}
-           {%- if preferences.get_value('results_on_new_tab') -%}
-             checked
-           {%- endif -%}{{- ' ' -}}
-           >{{- ' ' -}}
-  </p>{{- '' -}}
-  <div class="description">
-    {{- _('Open result links in new browser tabs') -}}
-  </div>{{- '' -}}
-</fieldset>{{- '' -}}
+{%- from 'simple/preferences/_cs.html' import switch_row -%}
+{{- switch_row('results_on_new_tab', _('Results in new tabs'), _('Open result links in new browser tabs'), preferences.get_value('results_on_new_tab')) -}}

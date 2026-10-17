@@ -1,16 +1,5 @@
-<fieldset>{{- '' -}}
-  <legend id="pref_method">{{- _('HTTP Method') -}}</legend>{{- '' -}}
-  <div class="value">{{- '' -}}
-    <select name='method' aria-labelledby="pref_method">{{- '' -}}
-      <option value="POST"
-              {%- if method == 'POST' %} selected="selected"{%- endif -%}>POST{{- '' -}}
-      </option>{{- '' -}}
-      <option value="GET"
-              {%- if method == 'GET' %} selected="selected"{%- endif -%}>GET{{- '' -}}
-      </option>{{- '' -}}
-    </select>{{- '' -}}
-  </div>{{- '' -}}
-  <div class="description">
-    {{- _('Change how forms are submitted') }} <a href="https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol#Request_methods" rel="external">🔗</a>
-  </div>{{- '' -}}
-</fieldset>{{- '' -}}
+{%- from 'simple/preferences/_cs.html' import select_row, option -%}
+{%- call select_row('method', _('HTTP Method'), _('Change how forms are submitted')) -%}
+  {{- option('POST', 'POST', method == 'POST') -}}
+  {{- option('GET', 'GET', method == 'GET') -}}
+{%- endcall -%}
