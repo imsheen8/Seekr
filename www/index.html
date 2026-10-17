@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seekr</title>
+<meta name="theme-color" content="#161616">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html,body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  :root{--bg:#161616;--fg:#ececec;--muted:#8b8b8b;--accent:#e07a5f;--accent2:#f0a28c;--ease:cubic-bezier(.22,1,.36,1)}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;background:var(--bg);color:var(--fg);overflow:hidden;
+    font-family:"IBM Plex Sans Arabic",Tajawal,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  #stage{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px;text-align:center;
+    background:radial-gradient(55% 42% at 50% 42%,#26221f 0%,var(--bg) 72%);
+    transition:opacity .55s var(--ease),transform .7s var(--ease),filter .55s}
+  #stage.out{opacity:0;transform:scale(1.06);filter:blur(6px)}
+
+  /* توهج خلف الشعار */
+  .glow{position:absolute;width:min(78vw,420px);aspect-ratio:1;border-radius:50%;top:calc(42% - min(39vw,210px));
+    background:radial-gradient(circle,rgba(224,122,95,.38),rgba(240,162,140,.12) 45%,transparent 68%);
+    filter:blur(28px);opacity:0;transform:scale(.5);animation:glow 1.8s var(--ease) .1s forwards,breathe 3.2s ease-in-out 2s infinite}
+  @keyframes glow{to{opacity:1;transform:scale(1)}}
+  @keyframes breathe{50%{opacity:.7;transform:scale(1.08)}}
+
+  /* الشعار: عدسة تُرسم ثم يدور حولها مؤشر التحميل */
+  .logo{position:relative;z-index:2;width:clamp(120px,32vw,160px);height:clamp(120px,32vw,160px);overflow:visible}
+  .logo .draw{fill:none;stroke:url(#g);stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.5s cubic-bezier(.6,0,.2,1) forwards}
+  .logo .ring{stroke-width:7}
+  .logo .handle{stroke-width:9;animation-delay:.55s}
+  .logo .shine{stroke:#fff;stroke-opacity:.9;stroke-width:3.2;animation-delay:1s;animation-duration:.8s}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  .orbit{transform-origin:42px 42px;opacity:0;animation:show .5s ease 1.6s forwards,spin 1.5s linear 1.6s infinite}
+  .orbit circle{fill:#fff;filter:drop-shadow(0 0 5px rgba(224,122,95,.95))}
+  @keyframes show{to{opacity:1}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* الكلمة: حرف حرف */
+  .word{position:relative;z-index:2;display:flex;direction:ltr;font-size:clamp(38px,11vw,58px);font-weight:700;letter-spacing:.08em}
+  .word span{display:inline-block;opacity:0;transform:translateY(26px) scale(.8);filter:blur(10px);
+    animation:letter .75s var(--ease) forwards;animation-delay:calc(.9s + var(--i)*.09s)}
+  .word span:last-child{color:var(--accent)}
+  @keyframes letter{to{opacity:1;transform:none;filter:none}}
+
+  .tag{position:relative;z-index:2;font-size:clamp(13px,3.6vw,16px);color:var(--muted);opacity:0;transform:translateY(8px);animation:tag .8s var(--ease) 1.7s forwards}
+  @keyframes tag{to{opacity:1;transform:none}}
+
+  /* شريط التقدّم وحالة التحميل */
+  .status{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:10px;opacity:0;animation:tag .8s var(--ease) 2.1s forwards}
+  .bar{width:min(52vw,220px);height:3px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden}
+  .bar i{display:block;height:100%;width:38%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));animation:slide 1.3s ease-in-out infinite}
+  @keyframes slide{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
+  #msg{font-size:14px;color:var(--muted);min-height:1.6em;max-width:320px;line-height:1.7;transition:opacity .3s}
+  #msg.swap{opacity:0}
+
+  /* حالة الخطأ */
+  pre{max-width:92vw;max-height:30vh;overflow:auto;text-align:left;direction:ltr;font-size:11px;color:var(--muted);background:rgba(127,127,127,.12);padding:10px;border-radius:10px;white-space:pre-wrap;word-break:break-word}
+  button{background:var(--accent);color:#fff;border:0;border-radius:12px;padding:11px 22px;font-size:15px}
+  [hidden]{display:none!important}
+  #stage.err .orbit,#stage.err .bar{display:none}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.01ms!important;animation-delay:0s!important;animation-iteration-count:1!important;transition:none!important}
+    .orbit{opacity:1}
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="glow"></div>
+
+  <svg class="logo" viewBox="0 0 100 100" aria-hidden="true">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#f0a28c"/><stop offset="1" stop-color="#e07a5f"/>
+      </linearGradient>
+    </defs>
+    <circle class="draw ring" cx="42" cy="42" r="28" pathLength="1" transform="rotate(-90 42 42)"/>
+    <path class="draw handle" d="M63 63 L88 88" pathLength="1"/>
+    <path class="draw shine" d="M26 36 A18 18 0 0 1 38 25" pathLength="1"/>
+    <g class="orbit"><circle cx="42" cy="14" r="4.2"/></g>
+  </svg>
+
+  <div class="word" aria-label="Seekr">
+    <span style="--i:0">S</span><span style="--i:1">e</span><span style="--i:2">e</span><span style="--i:3">k</span><span style="--i:4">r</span>
+  </div>
+  <div class="tag">بحث خاص… بلا تتبّع</div>
+
+  <div class="status">
+    <div class="bar" id="bar"><i></i></div>
+    <p id="msg">جارٍ تشغيل المحرك على جهازك…</p>
+    <pre id="err" hidden></pre>
+    <button id="retry" hidden onclick="location.reload()">إعادة المحاولة</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var started = Date.now();
+  var MIN_SHOW = 2600;            // أقل مدة لعرض الانميشن قبل الانتقال (مللي ثانية)
+  var stage = document.getElementById('stage');
+  var msg = document.getElementById('msg');
+  var texts = [
+    'جارٍ تشغيل المحرك على جهازك…',
+    'تجهيز محركات البحث…',
+    'أول تشغيل قد يستغرق دقيقة…',
+    'لحظات ويصبح كل شيء جاهزًا…'
+  ];
+  var ti = 0, leaving = false, failed = false;
+
+  setInterval(function () {
+    if (failed || leaving) return;
+    msg.classList.add('swap');
+    setTimeout(function () { ti = (ti + 1) % texts.length; msg.textContent = texts[ti]; msg.classList.remove('swap'); }, 300);
+  }, 2600);
+
+  function fail(text, detail) {
+    failed = true;
+    stage.classList.add('err');
+    msg.textContent = text;
+    if (detail) { var e = document.getElementById('err'); e.textContent = detail; e.hidden = false; }
+    document.getElementById('retry').hidden = false;
+  }
+
+  function go(url) {
+    if (leaving) return;
+    leaving = true;
+    stage.classList.add('out');
+    setTimeout(function () {
+      if (window.SXApp && window.SXApp.launch) { window.SXApp.launch(); } else { location.replace(url); }
+    }, 520);
+  }
+
+  function poll() {
+    if (!window.SXApp) { fail('هذه الصفحة تعمل داخل تطبيق الأندرويد فقط.'); return; }
+    var st;
+    try { st = JSON.parse(window.SXApp.status()); } catch (e) { st = { state: 'starting' }; }
+    if (st.state === 'ready') {
+      var url = 'http://127.0.0.1:' + st.port + '/__auth?t=' + encodeURIComponent(st.token);
+      var wait = Math.max(0, MIN_SHOW - (Date.now() - started));
+      setTimeout(function () { go(url); }, wait);
+      return;
+    }
+    if (st.state === 'error') { fail('تعذّر تشغيل المحرك.', st.error); return; }
+    if (Date.now() - started > 180000) { fail('استغرق التشغيل وقتًا طويلًا جدًا. أعد المحاولة.'); return; }
+    setTimeout(poll, 500);
+  }
+  poll();
+})();
+</script>
+</body>
+</html>

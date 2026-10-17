@@ -1,0 +1,5 @@
+{%- from 'simple/preferences/_cs.html' import select_row, option -%}
+{%- call select_row('doi_resolver', _('DOI Resolver'), _('Avoid paywalls by redirecting to open-access versions of publications when available')) -%}
+  {{- option('', '-', not current_doi_resolver) -}}
+  {%- for n in doi_resolvers -%}{{- option(n, n, n == current_doi_resolver) -}}{%- endfor -%}
+{%- endcall -%}

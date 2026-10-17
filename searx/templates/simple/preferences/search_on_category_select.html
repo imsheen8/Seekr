@@ -1,0 +1,2 @@
+{%- from 'simple/preferences/_cs.html' import switch_row -%}
+{{- switch_row('search_on_category_select', _('Search on category select'), _('Perform a search immediately if a category is selected. Disable to select multiple categories'), preferences.get_value('search_on_category_select')) -}}
