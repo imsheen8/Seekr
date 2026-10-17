@@ -12,81 +12,12 @@ app_id = cfg['appId']
 app = pathlib.Path('android/app')
 main = app / 'src/main'
 
-# 1) MainActivity: يبدأ بايثون في خيط خلفي ويعرض الحالة لصفحة التحميل عبر SXApp.status()
+# 1) واجهة المتصفح (Java): MainActivity + BrowserView + ... تُنسخ من android-java/ مع استبدال اسم الحزمة
 java_dir = main / 'java' / pathlib.Path(*app_id.split('.'))
 java_dir.mkdir(parents=True, exist_ok=True)
-(java_dir / 'MainActivity.java').write_text('''package %s;
-
-import android.content.Context;
-import android.os.Bundle;
-import android.webkit.JavascriptInterface;
-import android.webkit.WebView;
-import com.getcapacitor.BridgeActivity;
-import java.io.File;
-import org.json.JSONObject;
-
-public class MainActivity extends BridgeActivity {
-    /* 0 = يعمل التحميل، 1 = جاهز، -1 = فشل */
-    private static volatile int state = 0;
-    private static volatile int port = 0;
-    private static volatile String token = "";
-    private static volatile String error = "";
-    private static boolean starting = false;
-
-    private static void startPython(final Context ctx) {
-        synchronized (MainActivity.class) {
-            if (starting) return;
-            starting = true;
-        }
-        final Context app = ctx.getApplicationContext();
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    if (!com.chaquo.python.Python.isStarted()) {
-                        com.chaquo.python.Python.start(new com.chaquo.python.android.AndroidPlatform(app));
-                    }
-                    com.chaquo.python.PyObject mod = com.chaquo.python.Python.getInstance().getModule("seekr_android");
-                    String dir = new File(app.getFilesDir(), "seekr-data").getAbsolutePath();
-                    JSONObject info = new JSONObject(mod.callAttr("start", dir).toString());
-                    port = info.getInt("port");
-                    token = info.getString("token");
-                    state = 1;
-                } catch (Throwable t) {
-                    java.io.StringWriter sw = new java.io.StringWriter();
-                    t.printStackTrace(new java.io.PrintWriter(sw));
-                    String s = sw.toString();
-                    error = s.length() > 4000 ? s.substring(s.length() - 4000) : s;
-                    state = -1;
-                    synchronized (MainActivity.class) { starting = false; }
-                }
-            }
-        }, "seekr-python").start();
-    }
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        startPython(this);
-        WebView wv = getBridge().getWebView();
-        wv.addJavascriptInterface(new Object() {
-            @JavascriptInterface
-            public String status() {
-                try {
-                    JSONObject o = new JSONObject();
-                    o.put("state", state == 1 ? "ready" : (state < 0 ? "error" : "starting"));
-                    o.put("port", port);
-                    o.put("token", token);
-                    o.put("error", error);
-                    return o.toString();
-                } catch (Exception e) {
-                    return "{\\"state\\":\\"starting\\"}";
-                }
-            }
-        }, "SXApp");
-    }
-}
-''' % app_id, encoding='utf-8')
+for src in sorted((root / 'android-java').glob('*.java')):
+    text = src.read_text(encoding='utf-8').replace('__APP_ID__', app_id)
+    (java_dir / src.name).write_text(text, encoding='utf-8')
 
 # 2) نسخ مصادر بايثون إلى Chaquopy: app/src/main/python
 py_dst = main / 'python'
@@ -103,13 +34,41 @@ for item in (root / 'android-python').iterdir():
     else:
         shutil.copy2(item, py_dst / item.name)
 
-# 3) الصلاحيات + السماح بـ http://127.0.0.1 (محليًا فقط)
+# 3) الصلاحيات + السماح بـ http://127.0.0.1 + تسجيل التطبيق كمتصفح (روابط http/https)
 manifest = main / 'AndroidManifest.xml'
 m = manifest.read_text(encoding='utf-8')
-if 'android.permission.INTERNET' not in m:
-    m = m.replace('</manifest>', '    <uses-permission android:name="android.permission.INTERNET" />\n</manifest>')
+perms = ['INTERNET', 'ACCESS_NETWORK_STATE', 'CAMERA', 'RECORD_AUDIO', 'MODIFY_AUDIO_SETTINGS',
+         'ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION', 'POST_NOTIFICATIONS']
+add = ''.join('    <uses-permission android:name="android.permission.%s" />\n' % p_
+              for p_ in perms if 'android.permission.%s"' % p_ not in m)
+if 'android.hardware.camera' not in m:
+    add += '    <uses-feature android:name="android.hardware.camera" android:required="false" />\n'
+if add:
+    m = m.replace('</manifest>', add + '</manifest>')
 if 'usesCleartextTraffic' not in m:
     m = m.replace('<application', '<application android:usesCleartextTraffic="true" android:largeHeap="true"', 1)
+if 'windowSoftInputMode' not in m:
+    m = m.replace('android:name=".MainActivity"', 'android:name=".MainActivity" android:windowSoftInputMode="adjustResize"', 1)
+if 'android.intent.action.VIEW' not in m:
+    filt = '''
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="http" />
+            <data android:scheme="https" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.intent.action.WEB_SEARCH" />
+            <category android:name="android.intent.category.DEFAULT" />
+        </intent-filter>
+        <intent-filter>
+            <action android:name="android.intent.action.SEND" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="text/plain" />
+        </intent-filter>
+    '''
+    m = m.replace('</activity>', filt + '</activity>', 1)
 manifest.write_text(m, encoding='utf-8')
 
 # 3.5) عجلات lxml/pyyaml/markupsafe لدى Chaquopy موسومة android_24 → يجب أن يكون minSdkVersion >= 24

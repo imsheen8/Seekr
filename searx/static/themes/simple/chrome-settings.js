@@ -13,7 +13,66 @@
     });
   });
 
-  /* 2) القيمة الحالية كسطر ثانٍ في صفوف الاختيار */
+  /* 2) صفوف الاختيار: القيمة الحالية كسطر ثانٍ + نافذة اختيار من داخل التطبيق (بدل قائمة أندرويد الأصلية) */
+  var picker = document.createElement('div');
+  picker.className = 'cs-picker';
+  picker.setAttribute('role', 'dialog');
+  picker.setAttribute('aria-modal', 'true');
+  picker.innerHTML = '<div class="cs-picker-scrim"></div><div class="cs-picker-card">' +
+    '<h2 class="cs-picker-title"></h2><div class="cs-picker-list" role="radiogroup"></div>' +
+    '<div class="cs-picker-actions"><button type="button" class="cs-text-btn cs-picker-cancel"></button></div></div>';
+  main.appendChild(picker);
+  var pTitle = picker.querySelector('.cs-picker-title');
+  var pList = picker.querySelector('.cs-picker-list');
+  var pCancel = picker.querySelector('.cs-picker-cancel');
+  pCancel.textContent = (document.documentElement.lang || '').indexOf('ar') === 0 ? 'إلغاء' : 'Cancel';
+  var current = null;
+
+  var hidePicker = function () {
+    picker.classList.remove('open');
+    pList.textContent = '';
+    current = null;
+  };
+  var closePicker = function () {
+    /* إن فتحنا النافذة بإدخال في السجل فالرجوع يغلقها (وزر الرجوع في أندرويد يعمل بنفس الطريقة) */
+    if (history.state && history.state.csPick) { history.back(); } else { hidePicker(); }
+  };
+  window.addEventListener('popstate', function () { if (picker.classList.contains('open')) { hidePicker(); } });
+  picker.querySelector('.cs-picker-scrim').addEventListener('click', closePicker);
+  pCancel.addEventListener('click', closePicker);
+
+  var openPicker = function (row) {
+    var sel = row.querySelector('select');
+    var title = row.querySelector('.cs-title');
+    if (!sel) { return; }
+    current = sel;
+    pTitle.textContent = title ? title.textContent : '';
+    pList.textContent = '';
+    Array.prototype.forEach.call(sel.options, function (o, i) {
+      var item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'cs-opt' + (i === sel.selectedIndex ? ' on' : '');
+      item.setAttribute('role', 'radio');
+      item.setAttribute('aria-checked', i === sel.selectedIndex ? 'true' : 'false');
+      var dot = document.createElement('span'); dot.className = 'cs-radio';
+      var lab = document.createElement('span'); lab.className = 'cs-opt-t';
+      lab.textContent = o.text.replace(/\s+/g, ' ').trim();
+      item.appendChild(dot); item.appendChild(lab);
+      item.addEventListener('click', function () {
+        if (current) {
+          current.selectedIndex = i;
+          current.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        closePicker();
+      });
+      pList.appendChild(item);
+    });
+    history.pushState({ csPick: 1 }, '');
+    picker.classList.add('open');
+    var on = pList.querySelector('.on');
+    if (on) { pList.scrollTop = Math.max(0, on.offsetTop - pList.clientHeight / 2 + on.offsetHeight / 2); }
+  };
+
   main.querySelectorAll('.cs-select').forEach(function (row) {
     var sel = row.querySelector('select');
     var sub = row.querySelector('.cs-sub');
@@ -24,6 +83,10 @@
     };
     upd();
     sel.addEventListener('change', upd);
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('role', 'button');
+    row.addEventListener('click', function () { openPicker(row); });
+    row.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(row); } });
   });
 
   /* 3) شريط الحفظ يظهر عند تغيير أي إعداد */

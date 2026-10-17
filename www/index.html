@@ -129,7 +129,9 @@
     if (leaving) return;
     leaving = true;
     stage.classList.add('out');
-    setTimeout(function () { location.replace(url); }, 520);
+    setTimeout(function () {
+      if (window.SXApp && window.SXApp.launch) { window.SXApp.launch(); } else { location.replace(url); }
+    }, 520);
   }
 
   function poll() {
