@@ -300,7 +300,7 @@ final class Pages {
                 d.exists = true;
                 d.status = c.getInt(c.getColumnIndex(DownloadManager.COLUMN_STATUS));
                 d.total = c.getLong(c.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
-                d.so_far = c.getLong(c.getColumnIndex(DownloadManager.COLUMN_BYTES_SO_FAR));
+                d.so_far = c.getLong(c.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
             }
         } catch (Throwable ignored) {
         } finally {
