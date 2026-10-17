@@ -2,7 +2,7 @@
    التنقل بين الصفحات يعمل بـ CSS (:target) دون هذا الملف؛ هنا التحسينات فقط. */
 (function () {
   'use strict';
-  var main = document.getElementById('main_preferences');
+  var main = document.getElementById('cs-app');
   if (!main) { return; }
   document.documentElement.classList.add('cs-js');
 
@@ -47,7 +47,7 @@
   main.querySelectorAll('.cs-disable-all').forEach(function (b) { b.addEventListener('click', bulk(false)); });
 
   /* 5) فتح صفحة فرعية: ابدأ من أعلى الصفحة */
-  window.addEventListener('hashchange', function () { window.scrollTo(0, 0); });
+  window.addEventListener('hashchange', function () { main.scrollTop = 0; });
 
   /* 6) البحث في الإعدادات: يعرض الصفوف المطابقة من كل الصفحات */
   var q = document.getElementById('cs-q');

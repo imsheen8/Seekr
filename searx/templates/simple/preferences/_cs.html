@@ -24,6 +24,7 @@
     {%- if desc -%}<span class="cs-desc">{{ desc }}</span>{%- endif -%}
   </span>{{- '' -}}
   <input type="checkbox" name="{{ name }}" class="cs-sw{% if reversed %} cs-rev{% endif %}{% if extra_class %} {{ extra_class }}{% endif %}"{% if checked %} checked{% endif %}>{{- '' -}}
+  <span class="cs-track" aria-hidden="true"><span class="cs-thumb"></span></span>{{- '' -}}
 </label>
 {%- endmacro -%}
 

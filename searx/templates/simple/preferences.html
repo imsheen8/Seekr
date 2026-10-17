@@ -52,6 +52,7 @@
 {%- block linkto_preferences -%}{%- endblock -%}
 
 {%- block content -%}
+<div id="cs-app"><div class="cs-wrap">
 
   {#- ===== الصفحة الرئيسية: بحث + مجموعات بطاقية ===== -#}
   <div class="cs-index">
@@ -92,7 +93,7 @@
 
         <h2 class="cs-section">{{ tr('About', 'حول') }}</h2>
         <div class="cs-group">
-          <a class="cs-row cs-link" href="{{ url_for('info', pagename='about') }}"><span class="cs-text"><span class="cs-title">{{ tr('About Seekr', 'حول Seekr') }}</span><span class="cs-sub">{{ searxng_version }}</span></span></a>
+          {{- index_row('about', tr('About Seekr', 'حول Seekr'), searxng_version) -}}
         </div>
       </div>
     </div>
@@ -159,6 +160,15 @@
     {%- include 'simple/preferences/cookies.html' -%}
     {{- page_close() -}}
 
+    {{- page_open('about', tr('About Seekr', 'حول Seekr')) -}}
+    <div class="cs-group">
+      <div class="cs-row cs-info"><span class="cs-text"><span class="cs-title">Seekr</span><span class="cs-sub">{{ searxng_version }}</span></span></div>
+      <a class="cs-row cs-link" href="{{ url_for('info', pagename='about') }}"><span class="cs-text"><span class="cs-title">{{ _('About') }}</span></span></a>
+      <a class="cs-row cs-link" href="{{ searxng_git_url }}"><span class="cs-text"><span class="cs-title">{{ _('Source code') }}</span></span></a>
+    </div>
+    <p class="cs-note">{{ _('Powered by') }} <a href="{{ url_for('info', pagename='about') }}">SearXNG</a> (AGPL-3.0)</p>
+    {{- page_close() -}}
+
     {%- include 'simple/preferences/footer.html' -%}
   </form>
 
@@ -175,5 +185,6 @@
     </div>
   </div>
 
+</div></div>
   <script src="{{ url_for('static', filename='chrome-settings.js') }}"></script>
 {%- endblock -%}
