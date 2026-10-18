@@ -92,6 +92,7 @@ final class BrowserView extends FrameLayout {
 
     // واجهة
     private LinearLayout main, toolbar, omniBox, findBar;
+    private View ntpSpacer;
     private ImageView homeBtn, siteIcon, actionBtn, menuBtn;
     private U.CountView tabCount;
     private EditText omni, findInput;
@@ -163,6 +164,9 @@ final class BrowserView extends FrameLayout {
         LinearLayout.LayoutParams olp = new LinearLayout.LayoutParams(0, Theme.dp(46), 1f);
         olp.setMargins(Theme.dp(2), 0, Theme.dp(2), 0);
         toolbar.addView(omniBox, olp);
+        ntpSpacer = new View(act);
+        ntpSpacer.setVisibility(View.GONE);
+        toolbar.addView(ntpSpacer, new LinearLayout.LayoutParams(0, 1, 1f));
 
         siteIcon = U.icon(act, Ico.SEARCH, 20, Theme.dim);
         ((LinearLayout.LayoutParams) siteIcon.getLayoutParams()).setMarginStart(Theme.dp(14));
@@ -207,6 +211,8 @@ final class BrowserView extends FrameLayout {
         main.addView(progressHolder, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Theme.dp(3)));
 
         buildFindBar();
+        // يُطبَّق موضع الشريط بعد بناء بقية العناصر
+        post(new Runnable() { @Override public void run() { applyToolbarPrefs(); } });
 
         content = new FrameLayout(act);
         main.addView(content, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
@@ -429,6 +435,7 @@ final class BrowserView extends FrameLayout {
 
     private void restoreSession() {
         try {
+            if (!store.getBool("restore_tabs", true)) return;
             String s = store.loadSession();
             if (s == null) return;
             JSONObject root = new JSONObject(s);
@@ -480,8 +487,28 @@ final class BrowserView extends FrameLayout {
         hideFind();
         cur = t;
         incognitoMode = t.incognito;
+        if (t.incognito) lastIncog = t; else lastNormal = t;
         closePages();
         omni.clearFocus();
+        showCurrent();
+        refreshUi();
+    }
+
+    private Tab lastNormal, lastIncog;
+
+    /** من مبدّل التبويبات: ينقل التبويب النشط إلى آخر تبويب من النوع المختار (عادي/متخفٍّ). */
+    void selectMode(boolean incog) {
+        if (cur != null && cur.incognito == incog) return;
+        Tab target = incog ? lastIncog : lastNormal;
+        if (target == null || !tabs.contains(target)) {
+            target = null;
+            for (Tab o : tabs) if (o.incognito == incog) target = o;
+        }
+        if (target == null) return;
+        if (cur != null) captureThumb(cur);
+        cur = target;
+        incognitoMode = incog;
+        if (incog) lastIncog = target; else lastNormal = target;
         showCurrent();
         refreshUi();
     }
@@ -523,6 +550,11 @@ final class BrowserView extends FrameLayout {
         } else {
             refreshUi();
         }
+    }
+
+    void closeAllTabs() {
+        closeAll(false);
+        closeAll(true);
     }
 
     void closeAll(boolean incog) {
@@ -657,6 +689,8 @@ final class BrowserView extends FrameLayout {
         if (cur == null) return;
         closePages();
         omni.clearFocus();
+        String hp = store.getStr("homepage_url", "");
+        if (!hp.isEmpty()) { go(hp); return; }
         cur.ntp = true;
         showCurrent();
         refreshUi();
@@ -726,7 +760,54 @@ final class BrowserView extends FrameLayout {
         View v = pages.remove(pages.size() - 1);
         pageLayer.removeView(v);
         if (pages.isEmpty()) pageLayer.setVisibility(View.GONE);
+        else {
+            View top = pages.get(pages.size() - 1);
+            if (top instanceof SettingsPages.Refreshable) ((SettingsPages.Refreshable) top).refresh();
+        }
         refreshUi();
+    }
+
+    /** يطبّق تفضيلات الشريط: زر الرئيسية وموضع شريط العنوان (أعلى/أسفل). */
+    void applyToolbarPrefs() {
+        homeBtn.setVisibility(store.getBool("homepage_on", true) ? View.VISIBLE : View.GONE);
+        boolean bottom = "bottom".equals(store.getStr("addr_pos", "top"));
+        int idx = main.indexOfChild(toolbar);
+        if (bottom && idx != main.getChildCount() - 1) {
+            main.removeView(toolbar);
+            main.addView(toolbar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        } else if (!bottom && idx != 0) {
+            main.removeView(toolbar);
+            main.addView(toolbar, 0, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
+    }
+
+    interface ApiCb { void done(String body, String err); }
+
+    /** طلب GET إلى واجهة الخادم المحلي؛ يُنفَّذ النداء على خيط الواجهة. */
+    void api(final String path, final ApiCb cb) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String body = null, err = null;
+                try {
+                    HttpURLConnection c = (HttpURLConnection) new URL(base + path).openConnection();
+                    c.setRequestProperty("Cookie", COOKIE + "=" + token);
+                    c.setConnectTimeout(4000);
+                    c.setReadTimeout(8000);
+                    BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), "UTF-8"));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = r.readLine()) != null) sb.append(line);
+                    r.close();
+                    body = sb.toString().trim();
+                    if (body.startsWith("{")) { err = new JSONObject(body).optString("error", "?"); body = null; }
+                } catch (Throwable t) {
+                    err = String.valueOf(t);
+                }
+                final String fb = body, fe = err;
+                ui.post(new Runnable() { @Override public void run() { cb.done(fb, fe); } });
+            }
+        }, "seekr-api").start();
     }
 
     void closePages() {
@@ -747,7 +828,7 @@ final class BrowserView extends FrameLayout {
     void showHistory() { pushPage(Pages.history(this)); }
     void showBookmarks() { pushPage(Pages.bookmarks(this)); }
     void showDownloads() { pushPage(Pages.downloads(this)); }
-    void showSettings() { pushPage(Pages.settings(this)); }
+    void showSettings() { pushPage(SettingsPages.main(this)); }
 
     // =====================================================================
     //  تحديث الواجهة
@@ -756,6 +837,10 @@ final class BrowserView extends FrameLayout {
         if (cur == null) return;
         tabCount.setCount(countFor(incognitoMode), Theme.text);
         boolean f = omni.hasFocus();
+        // في صفحة «علامة تبويب جديدة» يكون مربع البحث الكبير هو الوحيد (مثل كروم)
+        boolean hideBar = cur.ntp && !f;
+        omniBox.setVisibility(hideBar ? View.GONE : View.VISIBLE);
+        if (ntpSpacer != null) ntpSpacer.setVisibility(hideBar ? View.VISIBLE : View.GONE);
         if (!f) setOmniText(displayText(cur));
         if (f) U.setIco(siteIcon, Ico.SEARCH, Theme.dim);
         else if (cur.ntp) U.setIco(siteIcon, cur.incognito ? Ico.INCOGNITO : Ico.SEARCH, Theme.dim);
@@ -829,6 +914,8 @@ final class BrowserView extends FrameLayout {
     }
 
     void focusOmnibox() {
+        omniBox.setVisibility(View.VISIBLE);
+        if (ntpSpacer != null) ntpSpacer.setVisibility(View.GONE);
         omni.requestFocus();
         showIme(omni);
     }
@@ -1018,7 +1105,7 @@ final class BrowserView extends FrameLayout {
         box.addView(top);
 
         box.addView(menuRow(holder, Ico.NEWTAB, Theme.s("New tab", "تبويب جديد"), false, new Runnable() {
-            @Override public void run() { openInNewTab(null, false); }
+            @Override public void run() { openInNewTab(null, incognitoMode); }
         }));
         box.addView(menuRow(holder, Ico.INCOGNITO, Theme.s("New Incognito tab", "تبويب متخفٍّ جديد"), false, new Runnable() {
             @Override public void run() { openInNewTab(null, true); }
@@ -1259,6 +1346,7 @@ final class BrowserView extends FrameLayout {
     }
 
     List<String[]> engineCache;
+    String engineError = "";
 
     /** يجلب قائمة المحركات من الخادم المحلي ثم ينفّذ onDone على خيط الواجهة. */
     void loadEngines(final Runnable onDone) {
@@ -1267,6 +1355,7 @@ final class BrowserView extends FrameLayout {
             @Override
             public void run() {
                 final List<String[]> out = new ArrayList<>();
+                String err = "";
                 try {
                     HttpURLConnection c = (HttpURLConnection) new URL(base + "/__api/engines").openConnection();
                     c.setRequestProperty("Cookie", COOKIE + "=" + token);
@@ -1277,16 +1366,25 @@ final class BrowserView extends FrameLayout {
                     String line;
                     while ((line = r.readLine()) != null) sb.append(line);
                     r.close();
-                    JSONArray a = new JSONArray(sb.toString());
-                    for (int i = 0; i < a.length(); i++) {
-                        JSONObject o = a.getJSONObject(i);
-                        out.add(new String[]{o.getString("key"), o.getString("name"), o.getString("cat"), o.getBoolean("on") ? "1" : "0"});
+                    String body = sb.toString().trim();
+                    if (body.startsWith("{")) {
+                        err = new JSONObject(body).optString("error", "?");
+                    } else {
+                        JSONArray a = new JSONArray(body);
+                        for (int i = 0; i < a.length(); i++) {
+                            JSONObject o = a.getJSONObject(i);
+                            out.add(new String[]{o.getString("key"), o.getString("name"), o.getString("cat"), o.getBoolean("on") ? "1" : "0"});
+                        }
                     }
-                } catch (Throwable ignored) { }
+                } catch (Throwable t) {
+                    err = String.valueOf(t);
+                }
+                final String errFinal = err;
                 ui.post(new Runnable() {
                     @Override
                     public void run() {
                         if (!out.isEmpty()) engineCache = out;
+                        engineError = out.isEmpty() ? (errFinal.isEmpty() ? "empty" : errFinal) : "";
                         onDone.run();
                     }
                 });
@@ -1294,7 +1392,7 @@ final class BrowserView extends FrameLayout {
         }, "seekr-engines").start();
     }
 
-    void showEngines() { pushPage(Pages.engines(this)); }
+    void showEngines() { pushPage(SettingsPages.engines(this)); }
 
     // =====================================================================
     //  التنزيلات
@@ -1392,7 +1490,7 @@ final class BrowserView extends FrameLayout {
     private WebView createWebView(final Tab t) {
         final WebView w = new WebView(act);
         WebSettings s = w.getSettings();
-        s.setJavaScriptEnabled(true);
+        s.setJavaScriptEnabled(store.getBool("js", true));
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setSupportZoom(true);
@@ -1412,7 +1510,8 @@ final class BrowserView extends FrameLayout {
             s.setCacheMode(WebSettings.LOAD_NO_CACHE);
             s.setSaveFormData(false);
         }
-        CookieManager.getInstance().setAcceptThirdPartyCookies(w, true);
+        CookieManager.getInstance().setAcceptThirdPartyCookies(w, store.getBool("third_party_cookies", true));
+        if (android.os.Build.VERSION.SDK_INT >= 26) s.setSafeBrowsingEnabled(store.getBool("safe_browsing", true));
         s.setUserAgentString(t.desktop ? desktopUA : mobileUA);
 
         w.setDownloadListener(new DownloadListener() {
@@ -1488,7 +1587,7 @@ final class BrowserView extends FrameLayout {
                 t.url = url;
                 String title = v.getTitle();
                 if (title != null && !title.isEmpty()) t.title = title;
-                if (!t.incognito && url != null && url.startsWith("http")) store.addHistory(url, t.title);
+                if (!t.incognito && url != null && url.startsWith("http") && !isSeekrHome(url)) store.addHistory(url, t.title);
                 if (t == cur) refreshUi();
             }
 
@@ -1662,6 +1761,7 @@ final class BrowserView extends FrameLayout {
                     else if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(r)) { res.add(r); need.add(Manifest.permission.RECORD_AUDIO); mic = true; }
                 }
                 if (res.isEmpty()) { req.deny(); return; }
+                if ((cam && !store.getBool("perm_camera", true)) || (mic && !store.getBool("perm_mic", true))) { req.deny(); return; }
                 String what = cam && mic ? Theme.s("camera and microphone", "الكاميرا والميكروفون")
                         : cam ? Theme.s("camera", "الكاميرا") : Theme.s("microphone", "الميكروفون");
                 dlg().setTitle(Store.hostOf(req.getOrigin().toString()))
@@ -1690,6 +1790,7 @@ final class BrowserView extends FrameLayout {
 
             @Override
             public void onGeolocationPermissionsShowPrompt(final String origin, final GeolocationPermissions.Callback cb) {
+                if (!store.getBool("perm_location", true)) { cb.invoke(origin, false, false); return; }
                 dlg().setTitle(Store.hostOf(origin))
                         .setMessage(Theme.s("Allow this site to know your location?", "السماح لهذا الموقع بمعرفة موقعك؟"))
                         .setPositiveButton(Theme.s("Allow", "سماح"), new android.content.DialogInterface.OnClickListener() {

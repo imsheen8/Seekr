@@ -84,18 +84,53 @@ def _prepare_settings(data_dir: str, port: int) -> str:
 
 
 def _engines_json() -> str:
-    """قائمة المحركات (للإعدادات الأصلية في التطبيق): [{key, name, cat, on}] — on = مفعّل افتراضيًا."""
-    from searx import settings  # pylint: disable=import-outside-toplevel
-    from searx.engines import DEFAULT_CATEGORY, engines  # pylint: disable=import-outside-toplevel
+    """قائمة المحركات (للإعدادات الأصلية في التطبيق): [{key, name, cat, on}] — on = مفعّل افتراضيًا.
+    عند أي خطأ يعيد {"error": "..."} ليعرضه التطبيق بدل بقاء «جارٍ التحميل»."""
+    try:
+        import searx  # pylint: disable=import-outside-toplevel
+        import searx.engines as sx_engines  # pylint: disable=import-outside-toplevel
 
-    allowed = list(settings["categories_as_tabs"].keys()) + [DEFAULT_CATEGORY]
-    out = []
-    for eng in engines.values():
-        for cat in eng.categories:
-            if cat in allowed:
-                out.append({"key": f"{eng.name}__{cat}", "name": eng.name, "cat": cat, "on": not eng.disabled})
-    out.sort(key=lambda e: (e["cat"], e["name"].lower()))
-    return json.dumps(out, ensure_ascii=False)
+        cfg = searx.settings
+        allowed = list(cfg.get("categories_as_tabs", {}).keys()) + [getattr(sx_engines, "DEFAULT_CATEGORY", "other")]
+        out = []
+        for eng in list(sx_engines.engines.values()):
+            name = getattr(eng, "name", None)
+            if not name:
+                continue
+            disabled = bool(getattr(eng, "disabled", False))
+            for cat in list(getattr(eng, "categories", []) or []):
+                if cat in allowed:
+                    out.append({"key": f"{name}__{cat}", "name": str(name), "cat": str(cat), "on": not disabled})
+        out.sort(key=lambda e: (e["cat"], e["name"].lower()))
+        return json.dumps(out, ensure_ascii=False)
+    except Exception as exc:  # pylint: disable=broad-except
+        import traceback  # pylint: disable=import-outside-toplevel
+
+        return json.dumps({"error": traceback.format_exc()[-800:] or str(exc)}, ensure_ascii=False)
+
+
+def _plugins_json() -> str:
+    """قائمة الإضافات: [{id, name, desc, on}] — on = مفعّلة افتراضيًا."""
+    try:
+        from searx import plugins as sx_plugins  # pylint: disable=import-outside-toplevel
+
+        out = []
+        for plg in list(sx_plugins.STORAGE):
+            info = getattr(plg, "info", None)
+            out.append(
+                {
+                    "id": str(plg.id),
+                    "name": str(getattr(info, "name", plg.id)),
+                    "desc": str(getattr(info, "description", "")),
+                    "on": bool(getattr(plg, "active", False)),
+                }
+            )
+        out.sort(key=lambda e: e["name"].lower())
+        return json.dumps(out, ensure_ascii=False)
+    except Exception:  # pylint: disable=broad-except
+        import traceback  # pylint: disable=import-outside-toplevel
+
+        return json.dumps({"error": traceback.format_exc()[-800:]}, ensure_ascii=False)
 
 
 def _guard(app):
@@ -132,8 +167,8 @@ def _guard(app):
             start_response("403 Forbidden", [("Content-Type", "text/plain"), ("Content-Length", "9")])
             return [b"Forbidden"]
 
-        if path == "/__api/engines":
-            body = _engines_json().encode("utf-8")
+        if path in ("/__api/engines", "/__api/plugins"):
+            body = (_engines_json() if path == "/__api/engines" else _plugins_json()).encode("utf-8")
             start_response("200 OK", [("Content-Type", "application/json; charset=utf-8"), ("Content-Length", str(len(body)))])
             return [body]
 

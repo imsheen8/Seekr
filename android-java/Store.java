@@ -128,7 +128,7 @@ final class Store {
 
     // ---------- السجل ----------
     synchronized void addHistory(String url, String title) {
-        if (url == null || url.isEmpty()) return;
+        if (url == null || url.isEmpty() || isHome(url)) return;
         long now = System.currentTimeMillis();
         if (!history.isEmpty()) {
             Entry last = history.get(0);
@@ -158,7 +158,15 @@ final class Store {
         }
     }
 
-    synchronized List<Entry> history() { return new ArrayList<>(history); }
+    private static boolean isHome(String u) {
+        return u.matches("^https?://(127\\.0\\.0\\.1|localhost)(:\\d+)?/?(#.*)?$");
+    }
+
+    synchronized List<Entry> history() {
+        List<Entry> out = new ArrayList<>();
+        for (Entry e : history) if (!isHome(e.url)) out.add(e);
+        return out;
+    }
 
     synchronized void deleteHistory(Entry e) {
         history.remove(e);
