@@ -1,0 +1,4 @@
+{%- from 'simple/preferences/_cs.html' import select_row, option -%}
+{%- call select_row('locale', _('Interface language'), _('Change the language of the layout')) -%}
+  {%- for locale_id,locale_name in locales.items() | sort -%}{{- option(locale_id, locale_name, locale_id == current_locale) -}}{%- endfor -%}
+{%- endcall -%}

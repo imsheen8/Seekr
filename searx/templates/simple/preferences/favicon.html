@@ -1,0 +1,5 @@
+{%- from 'simple/preferences/_cs.html' import select_row, option -%}
+{%- call select_row('favicon_resolver', _('Favicon Resolver'), _('Display favicons near search results')) -%}
+  {{- option('', '-', not favicon_resolver) -}}
+  {%- for backend in favicon_resolver_names -%}{{- option(backend, backend, backend == favicon_resolver) -}}{%- endfor -%}
+{%- endcall -%}

@@ -1,0 +1,5 @@
+{%- from 'simple/preferences/_cs.html' import select_row, option -%}
+{%- call select_row('autocomplete', _('Autocomplete'), _('Show possible queries as you type')) -%}
+  {{- option('', '-', not autocomplete) -}}
+  {%- for backend in autocomplete_backends -%}{{- option(backend, backend, backend == autocomplete) -}}{%- endfor -%}
+{%- endcall -%}

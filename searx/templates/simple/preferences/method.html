@@ -1,0 +1,5 @@
+{%- from 'simple/preferences/_cs.html' import select_row, option -%}
+{%- call select_row('method', _('HTTP Method'), _('Change how forms are submitted')) -%}
+  {{- option('POST', 'POST', method == 'POST') -}}
+  {{- option('GET', 'GET', method == 'GET') -}}
+{%- endcall -%}

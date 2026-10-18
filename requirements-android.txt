@@ -1,0 +1,22 @@
+# حزم بايثون التي يثبّتها Chaquopy داخل التطبيق (بايثون الخالصة غالبًا؛ lxml و pyyaml و markupsafe لها حزم أصلية عند Chaquopy)
+# curl_cffi و msgspec مستبدلتان ببدائل داخل android-python/ ولا تُثبَّتان. granian غير مطلوب (نستخدم werkzeug).
+flask==3.1.3
+flask-babel==4.0.0
+jinja2==3.1.6
+pygments==2.21.0
+python-dateutil==2.9.0.post0
+babel==2.18.0
+markdown-it-py==4.2.0
+isodate==0.7.2
+whitenoise==6.12.0
+typing-extensions==4.16.0
+certifi
+requests
+PySocks
+typer-slim
+valkey==6.1.1
+# حزم أصلية: لا نثبّت إصدارًا محددًا ليختار Chaquopy ما يتوفر عنده. عدّلها هنا إن فشل البناء.
+# يُفرض --only-binary على lxml و pyyaml في scripts/patch-android.py، فيختار pip أحدث عجلة أندرويد متاحة لدى Chaquopy
+lxml
+pyyaml
+markupsafe

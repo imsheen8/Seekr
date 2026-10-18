@@ -1,0 +1,6 @@
+{%- from 'simple/preferences/_cs.html' import select_row, option -%}
+{%- call select_row('safesearch', _('SafeSearch'), _('Filter content')) -%}
+  {{- option('2', _('Strict'), safesearch == 2) -}}
+  {{- option('1', _('Moderate'), safesearch == 1) -}}
+  {{- option('0', _('None'), safesearch == 0) -}}
+{%- endcall -%}
