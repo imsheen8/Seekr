@@ -1,8 +1,0 @@
-{%- from 'simple/preferences/_cs.html' import select_row, option -%}
-{%- call select_row('theme', _('Theme'), _('Change the layout of Seekr')) -%}
-  {%- for name in themes -%}{{- option(name, name | capitalize, name == theme) -}}{%- endfor -%}
-{%- endcall -%}
-{%- call select_row('simple_style', _('Theme style'), _('Choose auto to follow your browser settings')) -%}
-  {%- for name in ['auto', 'light', 'dark', 'black'] -%}{{- option(name, _(name) | capitalize, name == preferences.get_value('simple_style')) -}}{%- endfor -%}
-{%- endcall -%}
-{%- include 'simple/preferences/center_alignment.html' -%}

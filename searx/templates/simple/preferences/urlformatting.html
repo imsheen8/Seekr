@@ -1,7 +1,0 @@
-{%- from 'simple/preferences/_cs.html' import select_row, option -%}
-{%- set uf = preferences.get_value('url_formatting') -%}
-{%- call select_row('url_formatting', _('URL formatting'), _('Change result URL formatting')) -%}
-  {{- option('pretty', _('Pretty'), uf == 'pretty') -}}
-  {{- option('full', _('Full'), uf == 'full') -}}
-  {{- option('host', _('Host'), uf == 'host') -}}
-{%- endcall -%}
