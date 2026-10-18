@@ -293,7 +293,7 @@ final class SettingsPages {
                     case "site": b.pushPage(siteSettings(b)); break;
                     case "lang": b.pushPage(languages(b)); break;
                     case "about": b.pushPage(about(b)); break;
-                    case "downloads": b.showDownloads(); break;
+                    case "downloads": b.pushPage(downloadsSettings(b)); break;
                     case "default":
                         startSettings(b, Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS);
                         break;
@@ -922,6 +922,59 @@ final class SettingsPages {
                 String[] sLangN = {Theme.s("Detect automatically", "الاكتشاف التلقائي"), Theme.s("Any language", "أي لغة"), "العربية", "English", "Français", "Deutsch", "Español",
                         "Italiano", "Português", "Русский", "Türkçe", "فارسی", "中文", "日本語", "한국어", "Nederlands", "Polski", "हिन्दी", "Indonesia"};
                 group(list, cookieChoice(b, Theme.s("Search language", "لغة البحث"), "language", "auto", sLang, sLangN));
+            }
+        });
+    }
+
+    static View downloadsSettings(final BrowserView b) {
+        return new Page(b, Theme.s("Downloads", "التنزيلات"), null, new Builder() {
+            @Override
+            public void build(final Page p, LinearLayout list) {
+                final String[] vals = {"Download", "Documents", "Pictures", "Movies", "Music", "DCIM"};
+                final String[] names = {Theme.s("Downloads", "التنزيلات"), Theme.s("Documents", "المستندات"), Theme.s("Pictures", "الصور"),
+                        Theme.s("Movies", "الفيديو"), Theme.s("Music", "الموسيقى"), Theme.s("Camera (DCIM)", "الكاميرا (DCIM)")};
+                section(list, Theme.s("Location", "الموقع"));
+                group(list,
+                        row(b.act, Theme.s("Download location", "مسار التنزيل"), b.downloadPath(), null, new Runnable() {
+                            @Override
+                            public void run() {
+                                String cur = b.store.getStr("dl_dir", "Download");
+                                int sel = 0;
+                                for (int i = 0; i < vals.length; i++) if (vals[i].equals(cur)) sel = i;
+                                b.dlg().setTitle(Theme.s("Download location", "مسار التنزيل"))
+                                        .setSingleChoiceItems(names, sel, new android.content.DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(android.content.DialogInterface d, int which) {
+                                                b.store.setStr("dl_dir", vals[which]);
+                                                d.dismiss();
+                                                p.refresh();
+                                            }
+                                        }).show();
+                            }
+                        }),
+                        row(b.act, Theme.s("Sub-folder", "مجلد فرعي"), b.store.getStr("dl_sub", "").isEmpty() ? Theme.s("None", "بلا") : b.store.getStr("dl_sub", ""), null, new Runnable() {
+                            @Override
+                            public void run() {
+                                final EditText in = new EditText(b.act);
+                                in.setSingleLine(true);
+                                in.setText(b.store.getStr("dl_sub", ""));
+                                in.setTextColor(Theme.text);
+                                b.dlg().setTitle(Theme.s("Sub-folder", "مجلد فرعي")).setView(in)
+                                        .setPositiveButton(Theme.s("Save", "حفظ"), new android.content.DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(android.content.DialogInterface d, int w) {
+                                                String v = in.getText().toString().trim().replaceAll("[\\\\:*?\"<>|]", "").replaceAll("^/+|/+$", "");
+                                                b.store.setStr("dl_sub", v);
+                                                p.refresh();
+                                            }
+                                        })
+                                        .setNegativeButton(Theme.s("Cancel", "إلغاء"), null).show();
+                            }
+                        }));
+                section(list, Theme.s("Downloaded files", "الملفات المنزّلة"));
+                group(list, row(b.act, Theme.s("Show downloads", "عرض التنزيلات"), null, null, new Runnable() {
+                    @Override public void run() { b.showDownloads(); }
+                }));
             }
         });
     }

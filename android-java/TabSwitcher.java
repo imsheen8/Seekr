@@ -7,8 +7,6 @@ import android.graphics.Outline;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Gravity;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
@@ -16,7 +14,6 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import java.util.ArrayList;
@@ -68,13 +65,17 @@ final class TabSwitcher extends LinearLayout implements SettingsPages.Refreshabl
         seg.setBackground(Theme.round(Theme.surface, 26));
         seg.setPadding(Theme.dp(4), Theme.dp(4), Theme.dp(4), Theme.dp(4));
         segNormal = new FrameLayout(b.act);
+        segNormal.setClickable(true);
         seg1Count = new U.CountView(b.act);
+        seg1Count.setClickable(false);   // اللمس يذهب إلى الحاوية كلها وليس إلى الأيقونة فقط
+        seg1Count.setBackground(null);
         segNormal.addView(seg1Count, new FrameLayout.LayoutParams(Theme.dp(44), Theme.dp(44), Gravity.CENTER));
         segNormal.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { mode = 0; b.selectMode(false); refresh(); }
         });
         seg.addView(segNormal, new LinearLayout.LayoutParams(Theme.dp(64), Theme.dp(44)));
         segIncog = new FrameLayout(b.act);
+        segIncog.setClickable(true);
         seg2Icon = U.icon(b.act, Ico.INCOGNITO, 24, Theme.text);
         segIncog.addView(seg2Icon, new FrameLayout.LayoutParams(Theme.dp(24), Theme.dp(24), Gravity.CENTER));
         segIncog.setOnClickListener(new View.OnClickListener() {
@@ -82,6 +83,7 @@ final class TabSwitcher extends LinearLayout implements SettingsPages.Refreshabl
         });
         seg.addView(segIncog, new LinearLayout.LayoutParams(Theme.dp(64), Theme.dp(44)));
         segGroups = new FrameLayout(b.act);
+        segGroups.setClickable(true);
         seg3Icon = U.icon(b.act, Ico.GRID, 24, Theme.text);
         segGroups.addView(seg3Icon, new FrameLayout.LayoutParams(Theme.dp(24), Theme.dp(24), Gravity.CENTER));
         segGroups.setOnClickListener(new View.OnClickListener() {
@@ -128,17 +130,17 @@ final class TabSwitcher extends LinearLayout implements SettingsPages.Refreshabl
     }
 
     private void showMore(View anchor) {
-        PopupMenu pm = new PopupMenu(b.act, anchor);
-        Menu m = pm.getMenu();
+        PM pm = new PM(b.act, anchor);
+        PM m = pm;
         boolean incog = mode == 1;
-        m.add(0, 1, 0, incog ? Theme.s("Close all Incognito tabs", "إغلاق كل التبويبات المتخفّية") : Theme.s("Close all tabs", "إغلاق كل التبويبات"));
-        m.add(0, 2, 1, listMode ? Theme.s("Grid view", "عرض شبكي") : Theme.s("List view", "عرض قائمة"));
-        m.add(0, 3, 2, Theme.s("New tab", "تبويب جديد"));
-        m.add(0, 4, 3, Theme.s("New Incognito tab", "تبويب متخفٍّ جديد"));
-        m.add(0, 5, 4, Theme.s("Settings", "الإعدادات"));
-        pm.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+        m.add(1, incog ? Theme.s("Close all Incognito tabs", "إغلاق كل التبويبات المتخفّية") : Theme.s("Close all tabs", "إغلاق كل التبويبات"));
+        m.add(2, listMode ? Theme.s("Grid view", "عرض شبكي") : Theme.s("List view", "عرض قائمة"));
+        m.add(3, Theme.s("New tab", "تبويب جديد"));
+        m.add(4, Theme.s("New Incognito tab", "تبويب متخفٍّ جديد"));
+        m.add(5, Theme.s("Settings", "الإعدادات"));
+        pm.setOnMenuItemClickListener(new PM.OnItem() {
             @Override
-            public boolean onMenuItemClick(MenuItem it) {
+            public boolean onMenuItemClick(PM.Item it) {
                 switch (it.getItemId()) {
                     case 1: b.closeAll(mode == 1); if (b.hasPages()) refresh(); break;
                     case 2: listMode = !listMode; refresh(); break;
@@ -384,16 +386,16 @@ final class TabSwitcher extends LinearLayout implements SettingsPages.Refreshabl
     }
 
     private void groupMenu(View anchor, final TabGroup g) {
-        PopupMenu pm = new PopupMenu(b.act, anchor);
-        Menu m = pm.getMenu();
-        if (g.closed) m.add(0, 5, 0, Theme.s("Open", "فتح"));
-        else m.add(0, 1, 0, Theme.s("Close", "إغلاق"));
-        m.add(0, 2, 1, Theme.s("Rename", "إعادة تسمية"));
-        if (!g.closed) m.add(0, 3, 2, Theme.s("Ungroup", "فصل المجموعة"));
-        m.add(0, 4, 3, Theme.s("Delete", "حذف"));
-        pm.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+        PM pm = new PM(b.act, anchor);
+        PM m = pm;
+        if (g.closed) m.add(5, Theme.s("Open", "فتح"));
+        else m.add(1, Theme.s("Close", "إغلاق"));
+        m.add(2, Theme.s("Rename", "إعادة تسمية"));
+        if (!g.closed) m.add(3, Theme.s("Ungroup", "فصل المجموعة"));
+        m.add(4, Theme.s("Delete", "حذف"));
+        pm.setOnMenuItemClickListener(new PM.OnItem() {
             @Override
-            public boolean onMenuItemClick(MenuItem it) {
+            public boolean onMenuItemClick(PM.Item it) {
                 switch (it.getItemId()) {
                     case 1: b.closeGroup(g); refresh(); break;
                     case 2: renameDialog(b, g, new Runnable() { @Override public void run() { refresh(); } }); break;
@@ -547,19 +549,19 @@ final class TabSwitcher extends LinearLayout implements SettingsPages.Refreshabl
     }
 
     private static void tabMenu(final BrowserView b, View anchor, final Tab t, final Runnable rerender) {
-        PopupMenu pm = new PopupMenu(b.act, anchor);
-        Menu m = pm.getMenu();
+        PM pm = new PM(b.act, anchor);
+        PM m = pm;
         final List<TabGroup> open = new ArrayList<>();
         for (TabGroup g : b.groups) if (!g.closed && g != t.group) open.add(g);
         if (!t.incognito) {
-            m.add(0, 1, 0, Theme.s("Add to new group", "إضافة إلى مجموعة جديدة"));
-            if (!open.isEmpty()) m.add(0, 2, 1, Theme.s("Add to group…", "إضافة إلى مجموعة…"));
-            if (t.group != null) m.add(0, 3, 2, Theme.s("Remove from group", "إزالة من المجموعة"));
+            m.add(1, Theme.s("Add to new group", "إضافة إلى مجموعة جديدة"));
+            if (!open.isEmpty()) m.add(2, Theme.s("Add to group…", "إضافة إلى مجموعة…"));
+            if (t.group != null) m.add(3, Theme.s("Remove from group", "إزالة من المجموعة"));
         }
-        m.add(0, 4, 3, Theme.s("Close tab", "إغلاق التبويب"));
-        pm.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+        m.add(4, Theme.s("Close tab", "إغلاق التبويب"));
+        pm.setOnMenuItemClickListener(new PM.OnItem() {
             @Override
-            public boolean onMenuItemClick(MenuItem it) {
+            public boolean onMenuItemClick(PM.Item it) {
                 switch (it.getItemId()) {
                     case 1: b.newGroupFor(t); rerender.run(); break;
                     case 2: {
@@ -668,14 +670,14 @@ final class TabSwitcher extends LinearLayout implements SettingsPages.Refreshabl
         }
 
         private void menu(View anchor) {
-            PopupMenu pm = new PopupMenu(b.act, anchor);
-            Menu m = pm.getMenu();
-            m.add(0, 1, 0, Theme.s("Close group", "إغلاق المجموعة"));
-            m.add(0, 2, 1, Theme.s("Ungroup", "فصل المجموعة"));
-            m.add(0, 3, 2, Theme.s("Delete group", "حذف المجموعة"));
-            pm.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            PM pm = new PM(b.act, anchor);
+            PM m = pm;
+            m.add(1, Theme.s("Close group", "إغلاق المجموعة"));
+            m.add(2, Theme.s("Ungroup", "فصل المجموعة"));
+            m.add(3, Theme.s("Delete group", "حذف المجموعة"));
+            pm.setOnMenuItemClickListener(new PM.OnItem() {
                 @Override
-                public boolean onMenuItemClick(MenuItem it) {
+                public boolean onMenuItemClick(PM.Item it) {
                     switch (it.getItemId()) {
                         case 1: b.closeGroup(g); break;
                         case 2: b.ungroup(g); break;

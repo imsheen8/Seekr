@@ -61,6 +61,12 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Theme.init(this);
+        // شاشة البداية داكنة دائمًا (#161616): نوحّد لون شريطَي الحالة والتنقل معها حتى يجهز المتصفح
+        try {
+            getWindow().setStatusBarColor(0xFF161616);
+            getWindow().setNavigationBarColor(0xFF161616);
+            getWindow().getDecorView().setSystemUiVisibility(0);
+        } catch (Throwable ignored) { }
         browser = new BrowserView(this, new Store(this));
         ViewGroup content = (ViewGroup) findViewById(android.R.id.content);
         content.addView(browser, 0, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));

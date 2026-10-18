@@ -18,8 +18,6 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.text.format.Formatter;
 import android.view.Gravity;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
@@ -27,7 +25,6 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import java.util.Calendar;
@@ -434,16 +431,16 @@ final class Pages {
         more.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                PopupMenu pm = new PopupMenu(b.act, more);
-                Menu m = pm.getMenu();
+                PM pm = new PM(b.act, more);
+                PM m = pm;
                 if (ok) {
-                    m.add(0, 1, 0, Theme.s("Open", "فتح"));
-                    m.add(0, 2, 1, Theme.s("Share", "مشاركة"));
+                    m.add(1, Theme.s("Open", "فتح"));
+                    m.add(2, Theme.s("Share", "مشاركة"));
                 }
-                m.add(0, 3, 2, Theme.s("Delete", "حذف"));
-                pm.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                m.add(3, Theme.s("Delete", "حذف"));
+                pm.setOnMenuItemClickListener(new PM.OnItem() {
                     @Override
-                    public boolean onMenuItemClick(MenuItem it) {
+                    public boolean onMenuItemClick(PM.Item it) {
                         if (it.getItemId() == 1) openDownload(b, dm, e);
                         else if (it.getItemId() == 2) shareDownload(b, dm, e);
                         else {

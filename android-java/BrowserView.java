@@ -1228,8 +1228,8 @@ final class BrowserView extends FrameLayout {
                 toast(added ? Theme.s("Bookmark added", "أُضيفت الإشارة المرجعية") : Theme.s("Bookmark removed", "أُزيلت الإشارة المرجعية"));
             }
         }));
-        top.addView(menuTopBtn(holder, Ico.SHARE, page, new Runnable() {
-            @Override public void run() { share(cur.url, cur.title); }
+        top.addView(menuTopBtn(holder, Ico.DOWNLOAD, true, new Runnable() {
+            @Override public void run() { showDownloads(); }
         }));
         top.addView(menuTopBtn(holder, Ico.REFRESH, page, new Runnable() { @Override public void run() { reload(); } }));
         box.addView(top);
@@ -1269,6 +1269,9 @@ final class BrowserView extends FrameLayout {
         }));
         box.addView(U.divider(act));
         if (page) {
+            box.addView(menuRow(holder, Ico.SHARE, Theme.s("Share…", "مشاركة…"), false, new Runnable() {
+                @Override public void run() { share(cur.url, cur.title); }
+            }));
             box.addView(menuRow(holder, Ico.SEARCH, Theme.s("Find in page", "بحث في الصفحة"), false, new Runnable() {
                 @Override public void run() { showFind(); }
             }));
@@ -1301,10 +1304,18 @@ final class BrowserView extends FrameLayout {
     }
 
     private View menuTopBtn(final PopupWindow[] h, int ico, boolean enabled, final Runnable r) {
-        ImageView v = U.ibtn(act, ico, enabled ? Theme.text : Theme.dim, null);
-        v.setLayoutParams(new LinearLayout.LayoutParams(0, Theme.dp(48), 1f));
-        v.setAlpha(enabled ? 1f : 0.45f);
+        FrameLayout cell = new FrameLayout(act);
+        cell.setLayoutParams(new LinearLayout.LayoutParams(0, Theme.dp(56), 1f));
+        ImageView v = new ImageView(act);
+        v.setImageDrawable(new Ico(ico, enabled ? Theme.text : Theme.dim));
+        int p = Theme.dp(12);
+        v.setPadding(p, p, p, p);
+        v.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        int bg = enabled ? (Theme.dark ? 0xFF211A17 : 0xFFFFFFFF) : (Theme.dark ? 0xFF55494A : 0xFFE4D6D2);
+        v.setBackground(Theme.rippleBg(bg, 24));
+        cell.addView(v, new FrameLayout.LayoutParams(Theme.dp(48), Theme.dp(48), Gravity.CENTER));
         if (enabled) {
+            v.setClickable(true);
             v.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View x) {
@@ -1313,7 +1324,7 @@ final class BrowserView extends FrameLayout {
                 }
             });
         }
-        return v;
+        return cell;
     }
 
     private View menuRow(final PopupWindow[] h, int ico, String label, boolean checked, final Runnable r) {
@@ -1537,6 +1548,15 @@ final class BrowserView extends FrameLayout {
     // =====================================================================
     //  التنزيلات
     // =====================================================================
+    String downloadPath() {
+        String dir = store.getStr("dl_dir", "Download");
+        String sub = store.getStr("dl_sub", "");
+        String base;
+        try { base = Environment.getExternalStoragePublicDirectory(dir).getAbsolutePath(); }
+        catch (Throwable e) { base = "/storage/emulated/0/" + dir; }
+        return sub.isEmpty() ? base : base + "/" + sub;
+    }
+
     void download(String url, String ua, String cd, String mime) {
         try {
             if (url == null || !(url.startsWith("http://") || url.startsWith("https://"))) {
@@ -1550,7 +1570,8 @@ final class BrowserView extends FrameLayout {
             if (ck != null) r.addRequestHeader("Cookie", ck);
             if (ua != null) r.addRequestHeader("User-Agent", ua);
             r.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            r.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name);
+            String sub = store.getStr("dl_sub", "");
+            r.setDestinationInExternalPublicDir(store.getStr("dl_dir", "Download"), (sub.isEmpty() ? "" : sub + "/") + name);
             DownloadManager dm = (DownloadManager) act.getSystemService(Context.DOWNLOAD_SERVICE);
             long id = dm.enqueue(r);
             store.addDownload(id, name, url, mime);

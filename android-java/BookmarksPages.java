@@ -8,15 +8,12 @@ import android.graphics.Typeface;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Gravity;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import java.util.ArrayList;
@@ -162,22 +159,21 @@ final class BookmarksPages {
 
         // ---------- الفرز والعرض ----------
         private void showSort(View anchor) {
-            PopupMenu pm = new PopupMenu(b.act, anchor);
-            Menu m = pm.getMenu();
+            PM pm = new PM(b.act, anchor);
+            PM m = pm;
             String cur = b.store.getStr("bm_sort", "manual");
             String[] keys = {"manual", "newest", "oldest", "opened", "az", "za"};
             String[] names = {Theme.s("Sort by manual order", "الترتيب اليدوي"), Theme.s("Sort by newest", "الأحدث أولًا"), Theme.s("Sort by oldest", "الأقدم أولًا"),
                     Theme.s("Sort by last opened", "آخر ما فُتح"), Theme.s("Sort by A to Z", "من أ إلى ي"), Theme.s("Sort by Z to A", "من ي إلى أ")};
-            for (int i = 0; i < keys.length; i++) m.add(1, 10 + i, i, names[i]).setCheckable(true).setChecked(keys[i].equals(cur));
-            m.setGroupCheckable(1, true, true);
+            for (int i = 0; i < keys.length; i++) m.addChecked(10 + i, names[i], keys[i].equals(cur));
+            m.divider();
             boolean visual = b.store.getBool("bm_visual", true);
-            m.add(2, 30, 20, Theme.s("Visual view", "عرض مرئي")).setCheckable(true).setChecked(visual);
-            m.add(2, 31, 21, Theme.s("Compact view", "عرض مضغوط")).setCheckable(true).setChecked(!visual);
-            m.setGroupCheckable(2, true, true);
+            m.addChecked(30, Theme.s("Visual view", "عرض مرئي"), visual);
+            m.addChecked(31, Theme.s("Compact view", "عرض مضغوط"), !visual);
             final String[] fk = keys;
-            pm.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            pm.setOnMenuItemClickListener(new PM.OnItem() {
                 @Override
-                public boolean onMenuItemClick(MenuItem it) {
+                public boolean onMenuItemClick(PM.Item it) {
                     int id = it.getItemId();
                     if (id >= 10 && id < 20) b.store.setStr("bm_sort", fk[id - 10]);
                     else if (id == 30) b.store.setBool("bm_visual", true);
@@ -347,17 +343,17 @@ final class BookmarksPages {
 
         // ---------- القوائم والحوارات ----------
         private void entryMenu(View anchor, final Store.Entry e) {
-            PopupMenu pm = new PopupMenu(b.act, anchor);
-            Menu m = pm.getMenu();
-            m.add(0, 1, 0, Theme.s("Open in new tab", "فتح في تبويب جديد"));
-            m.add(0, 2, 1, Theme.s("Open in new Incognito tab", "فتح في تبويب متخفٍّ جديد"));
-            m.add(0, 3, 2, Theme.s("Edit", "تعديل"));
-            m.add(0, 4, 3, Theme.s("Move to…", "نقل إلى…"));
-            m.add(0, 5, 4, Theme.s("Copy link address", "نسخ عنوان الرابط"));
-            m.add(0, 6, 5, Theme.s("Delete", "حذف"));
-            pm.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            PM pm = new PM(b.act, anchor);
+            PM m = pm;
+            m.add(1, Theme.s("Open in new tab", "فتح في تبويب جديد"));
+            m.add(2, Theme.s("Open in new Incognito tab", "فتح في تبويب متخفٍّ جديد"));
+            m.add(3, Theme.s("Edit", "تعديل"));
+            m.add(4, Theme.s("Move to…", "نقل إلى…"));
+            m.add(5, Theme.s("Copy link address", "نسخ عنوان الرابط"));
+            m.add(6, Theme.s("Delete", "حذف"));
+            pm.setOnMenuItemClickListener(new PM.OnItem() {
                 @Override
-                public boolean onMenuItemClick(MenuItem it) {
+                public boolean onMenuItemClick(PM.Item it) {
                     switch (it.getItemId()) {
                         case 1: b.store.touchBookmark(e); b.openInNewTab(e.url, false); break;
                         case 2: b.store.touchBookmark(e); b.openInNewTab(e.url, true); break;
@@ -373,13 +369,13 @@ final class BookmarksPages {
         }
 
         private void folderMenu(View anchor, final String name) {
-            PopupMenu pm = new PopupMenu(b.act, anchor);
-            Menu m = pm.getMenu();
-            m.add(0, 1, 0, Theme.s("Rename", "إعادة تسمية"));
-            m.add(0, 2, 1, Theme.s("Delete", "حذف"));
-            pm.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            PM pm = new PM(b.act, anchor);
+            PM m = pm;
+            m.add(1, Theme.s("Rename", "إعادة تسمية"));
+            m.add(2, Theme.s("Delete", "حذف"));
+            pm.setOnMenuItemClickListener(new PM.OnItem() {
                 @Override
-                public boolean onMenuItemClick(MenuItem it) {
+                public boolean onMenuItemClick(PM.Item it) {
                     if (it.getItemId() == 1) renameDialog(name);
                     else {
                         b.dlg().setTitle(Theme.s("Delete folder?", "حذف المجلد؟"))
