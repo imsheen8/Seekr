@@ -25,6 +25,8 @@ final class Store {
         long ts;
         long id; // للتنزيلات: معرّف DownloadManager
         String mime;
+        String folder = "";   // للإشارات: "" = إشارات الجوال، "rl" = قائمة القراءة، وإلا اسم المجلد
+        long opened;          // آخر مرة فُتحت فيها
 
         Entry(String title, String url, long ts) {
             this.title = title == null ? "" : title;
@@ -83,6 +85,8 @@ final class Store {
                 Entry e = new Entry(o.optString("t"), o.optString("u"), o.optLong("ts"));
                 e.id = o.optLong("id", -1);
                 e.mime = o.optString("m", null);
+                e.folder = o.optString("f", "");
+                e.opened = o.optLong("lo", 0);
                 out.add(e);
             }
         } catch (Throwable ignored) {
@@ -100,6 +104,8 @@ final class Store {
                 o.put("ts", e.ts);
                 if (e.id != 0) o.put("id", e.id);
                 if (e.mime != null) o.put("m", e.mime);
+                if (!e.folder.isEmpty()) o.put("f", e.folder);
+                if (e.opened != 0) o.put("lo", e.opened);
                 a.put(o);
             } catch (Throwable ignored) {
                 // تجاهل
@@ -181,15 +187,18 @@ final class Store {
     }
 
     // ---------- الإشارات المرجعية ----------
+    static final String READING = "rl";
+
     synchronized boolean isBookmarked(String url) {
-        for (Entry e : bookmarks) if (e.url.equals(url)) return true;
+        for (Entry e : bookmarks) if (!READING.equals(e.folder) && e.url.equals(url)) return true;
         return false;
     }
 
     /** يعيد true إن أُضيفت، false إن أُزيلت. */
     synchronized boolean toggleBookmark(String url, String title) {
         for (int i = 0; i < bookmarks.size(); i++) {
-            if (bookmarks.get(i).url.equals(url)) {
+            Entry e = bookmarks.get(i);
+            if (!READING.equals(e.folder) && e.url.equals(url)) {
                 bookmarks.remove(i);
                 save("bookmarks.json", bookmarks);
                 return false;
@@ -200,10 +209,100 @@ final class Store {
         return true;
     }
 
-    synchronized List<Entry> bookmarks() { return new ArrayList<>(bookmarks); }
+    /** كل الإشارات (بدون قائمة القراءة) — للاقتراحات. */
+    synchronized List<Entry> bookmarks() {
+        List<Entry> out = new ArrayList<>();
+        for (Entry e : bookmarks) if (!READING.equals(e.folder)) out.add(e);
+        return out;
+    }
+
+    /** عناصر مجلد: "" إشارات الجوال، "rl" قائمة القراءة، أو اسم مجلد. */
+    synchronized List<Entry> bookmarksIn(String folder) {
+        List<Entry> out = new ArrayList<>();
+        for (Entry e : bookmarks) if (e.folder.equals(folder)) out.add(e);
+        return out;
+    }
+
+    synchronized boolean isInReading(String url) {
+        for (Entry e : bookmarks) if (READING.equals(e.folder) && e.url.equals(url)) return true;
+        return false;
+    }
+
+    synchronized boolean toggleReading(String url, String title) {
+        for (int i = 0; i < bookmarks.size(); i++) {
+            Entry e = bookmarks.get(i);
+            if (READING.equals(e.folder) && e.url.equals(url)) {
+                bookmarks.remove(i);
+                save("bookmarks.json", bookmarks);
+                return false;
+            }
+        }
+        Entry n = new Entry(title == null || title.isEmpty() ? url : title, url, System.currentTimeMillis());
+        n.folder = READING;
+        bookmarks.add(0, n);
+        save("bookmarks.json", bookmarks);
+        return true;
+    }
 
     synchronized void removeBookmark(Entry e) {
         bookmarks.remove(e);
+        save("bookmarks.json", bookmarks);
+    }
+
+    synchronized void saveBookmarks() { save("bookmarks.json", bookmarks); }
+
+    synchronized void touchBookmark(Entry e) {
+        e.opened = System.currentTimeMillis();
+        save("bookmarks.json", bookmarks);
+    }
+
+    synchronized void moveBookmark(Entry e, String folder) {
+        e.folder = folder == null ? "" : folder;
+        save("bookmarks.json", bookmarks);
+    }
+
+    // مجلدات الإشارات (مستوى واحد داخل «إشارات الجوال»)
+    synchronized List<String> folders() {
+        List<String> out = new ArrayList<>();
+        try {
+            JSONArray a = new JSONArray(prefs.getString("bfolders", "[]"));
+            for (int i = 0; i < a.length(); i++) out.add(a.getString(i));
+        } catch (Throwable ignored) { }
+        return out;
+    }
+
+    private void saveFolders(List<String> l) {
+        prefs.edit().putString("bfolders", new JSONArray(l).toString()).apply();
+    }
+
+    synchronized boolean addFolder(String name) {
+        name = name == null ? "" : name.trim();
+        if (name.isEmpty() || READING.equals(name)) return false;
+        List<String> l = folders();
+        if (l.contains(name)) return false;
+        l.add(0, name);
+        saveFolders(l);
+        return true;
+    }
+
+    synchronized boolean renameFolder(String old, String name) {
+        name = name == null ? "" : name.trim();
+        List<String> l = folders();
+        if (name.isEmpty() || READING.equals(name) || (l.contains(name) && !name.equals(old))) return false;
+        int i = l.indexOf(old);
+        if (i < 0) return false;
+        l.set(i, name);
+        saveFolders(l);
+        for (Entry e : bookmarks) if (e.folder.equals(old)) e.folder = name;
+        save("bookmarks.json", bookmarks);
+        return true;
+    }
+
+    synchronized void deleteFolder(String name) {
+        List<String> l = folders();
+        l.remove(name);
+        saveFolders(l);
+        for (int i = bookmarks.size() - 1; i >= 0; i--) if (bookmarks.get(i).folder.equals(name)) bookmarks.remove(i);
         save("bookmarks.json", bookmarks);
     }
 

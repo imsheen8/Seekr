@@ -15,7 +15,8 @@ final class Ico extends Drawable {
     static final int BACK = 1, FORWARD = 2, REFRESH = 3, CLOSE = 4, PLUS = 5, HOME = 6, MENU = 7, STAR = 8,
             STAR_FILLED = 9, SEARCH = 10, LOCK = 11, DOWNLOAD = 12, HISTORY = 13, SHARE = 14, INCOGNITO = 15,
             GRID = 16, LIST = 17, TRASH = 18, SETTINGS = 19, DESKTOP = 20, HELP = 21, NEWTAB = 22, RECENT = 23,
-            MIC = 24, INFO = 25, GLOBE = 26, FOLDER = 27, DOTS_H = 28, CHECK = 29, COPY = 30, OPEN = 31;
+            MIC = 24, INFO = 25, GLOBE = 26, FOLDER = 27, DOTS_H = 28, CHECK = 29, COPY = 30, OPEN = 31,
+            SORT = 32, FOLDER_PLUS = 33, READING = 34, PENCIL = 35, UNGROUP = 36;
 
     private final int kind;
     private int color;
@@ -274,6 +275,43 @@ final class Ico extends Drawable {
                 c.drawLine(13, 4, 20, 4, s);
                 c.drawLine(20, 4, 20, 11, s);
                 c.drawLine(20, 4, 10.5f, 13.5f, s);
+                break;
+            case SORT:
+                c.drawLine(4, 7, 20, 7, s);
+                c.drawLine(7, 12, 17, 12, s);
+                c.drawLine(10, 17, 14, 17, s);
+                break;
+            case FOLDER_PLUS:
+                path.reset();
+                path.moveTo(3.5f, 18.5f); path.lineTo(3.5f, 6); path.lineTo(9.5f, 6); path.lineTo(11.5f, 8.5f);
+                path.lineTo(20.5f, 8.5f); path.lineTo(20.5f, 18.5f); path.close();
+                c.drawPath(path, s);
+                c.drawLine(12, 11.5f, 12, 16.5f, s);
+                c.drawLine(9.5f, 14, 14.5f, 14, s);
+                break;
+            case READING:
+                rect.set(4, 4, 20, 20);
+                c.drawRoundRect(rect, 3, 3, s);
+                c.drawCircle(8.5f, 9, 0.9f, f);
+                c.drawCircle(8.5f, 12.5f, 0.9f, f);
+                c.drawCircle(8.5f, 16, 0.9f, f);
+                c.drawLine(11.5f, 9, 16.5f, 9, s);
+                c.drawLine(11.5f, 12.5f, 16.5f, 12.5f, s);
+                c.drawLine(11.5f, 16, 16.5f, 16, s);
+                break;
+            case PENCIL:
+                path.reset();
+                path.moveTo(4, 20); path.lineTo(4.8f, 15.8f); path.lineTo(16, 4.6f); path.lineTo(19.4f, 8);
+                path.lineTo(8.2f, 19.2f); path.close();
+                c.drawPath(path, s);
+                c.drawLine(13.5f, 7, 17, 10.5f, s);
+                break;
+            case UNGROUP:
+                rect.set(4, 9, 15, 20);
+                c.drawRoundRect(rect, 2, 2, s);
+                c.drawLine(13, 11, 20, 4, s);
+                c.drawLine(14, 4, 20, 4, s);
+                c.drawLine(20, 4, 20, 10, s);
                 break;
             default:
                 break;

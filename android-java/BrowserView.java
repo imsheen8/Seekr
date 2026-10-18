@@ -422,6 +422,7 @@ final class BrowserView extends FrameLayout {
                 o.put("u", t.url);
                 o.put("t", t.title);
                 o.put("n", t.ntp);
+                if (t.group != null) o.put("g", t.group.id);
                 if (t == cur) idx = n;
                 arr.put(o);
                 n++;
@@ -429,6 +430,20 @@ final class BrowserView extends FrameLayout {
             JSONObject root = new JSONObject();
             root.put("cur", idx);
             root.put("tabs", arr);
+            JSONArray ga = new JSONArray();
+            for (TabGroup g : groups) {
+                JSONObject go = new JSONObject();
+                go.put("id", g.id);
+                go.put("t", g.title);
+                go.put("c", g.color);
+                go.put("u", g.updated);
+                go.put("x", g.closed);
+                JSONArray sv = new JSONArray();
+                for (String[] s : g.saved) sv.put(new JSONArray().put(s[0]).put(s[1]));
+                go.put("s", sv);
+                ga.put(go);
+            }
+            root.put("groups", ga);
             store.saveSession(root.toString());
         } catch (Throwable ignored) { }
     }
@@ -441,6 +456,27 @@ final class BrowserView extends FrameLayout {
             JSONObject root = new JSONObject(s);
             JSONArray arr = root.getJSONArray("tabs");
             int idx = root.optInt("cur", 0);
+            java.util.HashMap<Integer, TabGroup> gmap = new java.util.HashMap<>();
+            JSONArray ga = root.optJSONArray("groups");
+            if (ga != null) {
+                for (int i = 0; i < ga.length(); i++) {
+                    JSONObject go = ga.getJSONObject(i);
+                    TabGroup g = new TabGroup();
+                    g.id = go.optInt("id", g.id);
+                    TabGroup.bump(g.id);
+                    g.title = go.optString("t", "");
+                    g.color = go.optInt("c", TabGroup.PALETTE[0]);
+                    g.updated = go.optLong("u", g.updated);
+                    g.closed = go.optBoolean("x", false);
+                    JSONArray sv = go.optJSONArray("s");
+                    if (sv != null) for (int k = 0; k < sv.length(); k++) {
+                        JSONArray e = sv.getJSONArray(k);
+                        g.saved.add(new String[]{e.optString(0), e.optString(1)});
+                    }
+                    groups.add(g);
+                    gmap.put(g.id, g);
+                }
+            }
             Tab sel = null;
             for (int i = 0; i < arr.length() && i < 40; i++) {
                 JSONObject o = arr.getJSONObject(i);
@@ -449,6 +485,7 @@ final class BrowserView extends FrameLayout {
                 t.title = o.optString("t");
                 t.ntp = o.optBoolean("n", true) || t.url.isEmpty();
                 if (!t.ntp) t.pendingUrl = fixLocal(t.url);
+                if (o.has("g")) t.group = gmap.get(o.optInt("g"));
                 tabs.add(t);
                 if (i == idx) sel = t;
             }
@@ -473,12 +510,104 @@ final class BrowserView extends FrameLayout {
             t.title = Store.hostOf(url);
             t.pendingUrl = url;
         }
+        if (!select && !incog && t.parent != null && !t.parent.incognito) t.group = t.parent.group;
         tabs.add(t);
         if (select) switchTo(t);
         else {
-            toast(Theme.s("Opened in a new tab", "فُتحت في تبويب جديد"));
+            if (!quietAdd) toast(Theme.s("Opened in a new tab", "فُتحت في تبويب جديد"));
             refreshUi();
         }
+        return t;
+    }
+
+    private boolean quietAdd;
+
+    // =====================================================================
+    //  مجموعات التبويبات
+    // =====================================================================
+    final ArrayList<TabGroup> groups = new ArrayList<>();
+
+    List<Tab> tabsOf(TabGroup g) {
+        List<Tab> out = new ArrayList<>();
+        for (Tab t : tabs) if (t.group == g) out.add(t);
+        return out;
+    }
+
+    int groupSize(TabGroup g) {
+        return g.closed ? g.saved.size() : tabsOf(g).size();
+    }
+
+    TabGroup newGroupFor(Tab t) {
+        TabGroup g = new TabGroup();
+        g.color = TabGroup.PALETTE[groups.size() % TabGroup.PALETTE.length];
+        groups.add(g);
+        addToGroup(t, g);
+        return g;
+    }
+
+    void addToGroup(Tab t, TabGroup g) {
+        if (t == null || g == null || t.incognito) return;
+        TabGroup old = t.group;
+        t.group = g;
+        g.updated = System.currentTimeMillis();
+        g.closed = false;
+        if (old != null && old != g) cleanupGroup(old);
+    }
+
+    void removeFromGroup(Tab t) {
+        TabGroup g = t.group;
+        t.group = null;
+        if (g != null) { g.updated = System.currentTimeMillis(); cleanupGroup(g); }
+    }
+
+    void cleanupGroup(TabGroup g) {
+        if (!g.closed && tabsOf(g).isEmpty()) groups.remove(g);
+    }
+
+    void ungroup(TabGroup g) {
+        for (Tab t : tabsOf(g)) t.group = null;
+        groups.remove(g);
+    }
+
+    void deleteGroup(TabGroup g) {
+        List<Tab> ts = tabsOf(g);
+        groups.remove(g);
+        for (Tab t : ts) closeTab(t);
+    }
+
+    /** «إغلاق» المجموعة: تُغلق تبويباتها وتبقى محفوظة في قائمة المجموعات. */
+    void closeGroup(TabGroup g) {
+        g.saved.clear();
+        List<Tab> ts = tabsOf(g);
+        for (Tab t : ts) if (!t.ntp && t.url != null && !t.url.isEmpty()) g.saved.add(new String[]{t.title, t.url});
+        g.closed = true;
+        g.updated = System.currentTimeMillis();
+        for (Tab t : ts) closeTab(t);
+    }
+
+    void restoreGroup(TabGroup g) {
+        g.closed = false;
+        g.updated = System.currentTimeMillis();
+        Tab first = null;
+        quietAdd = true;
+        try {
+            for (String[] s : g.saved) {
+                Tab t = addTab(false, s[1], false);
+                t.title = s[0] == null ? "" : s[0];
+                t.group = g;
+                if (first == null) first = t;
+            }
+            if (first == null) { first = addTab(false, null, false); first.group = g; }
+        } finally {
+            quietAdd = false;
+        }
+        g.saved.clear();
+        switchTo(first);
+    }
+
+    Tab addTabToGroup(TabGroup g) {
+        Tab t = addTab(false, null, true);
+        addToGroup(t, g);
         return t;
     }
 
@@ -523,6 +652,7 @@ final class BrowserView extends FrameLayout {
         int i = tabs.indexOf(t);
         if (i < 0) return;
         tabs.remove(i);
+        if (t.group != null) { t.group.updated = System.currentTimeMillis(); cleanupGroup(t.group); }
         if (!t.incognito && t.url != null && !t.url.isEmpty() && !t.ntp) {
             closed.add(0, new String[]{t.title, t.url});
             while (closed.size() > 15) closed.remove(closed.size() - 1);
@@ -1123,6 +1253,19 @@ final class BrowserView extends FrameLayout {
         }));
         box.addView(menuRow(holder, Ico.STAR, Theme.s("Bookmarks", "الإشارات المرجعية"), false, new Runnable() {
             @Override public void run() { showBookmarks(); }
+        }));
+        if (page) {
+            final boolean inRl = store.isInReading(cur.url);
+            box.addView(menuRow(holder, Ico.READING, inRl ? Theme.s("Remove from reading list", "إزالة من قائمة القراءة") : Theme.s("Add to reading list", "إضافة إلى قائمة القراءة"), false, new Runnable() {
+                @Override
+                public void run() {
+                    boolean added = store.toggleReading(cur.url, cur.title);
+                    toast(added ? Theme.s("Added to reading list", "أُضيفت إلى قائمة القراءة") : Theme.s("Removed from reading list", "أُزيلت من قائمة القراءة"));
+                }
+            }));
+        }
+        box.addView(menuRow(holder, Ico.READING, Theme.s("Reading list", "قائمة القراءة"), false, new Runnable() {
+            @Override public void run() { pushPage(BookmarksPages.root(BrowserView.this)); pushPage(new BookmarksPages.Pg(BrowserView.this, Store.READING)); }
         }));
         box.addView(menuRow(holder, Ico.RECENT, Theme.s("Recent tabs", "علامات التبويب الأخيرة"), false, new Runnable() {
             @Override public void run() { showRecent(); }

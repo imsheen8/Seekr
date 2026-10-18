@@ -20,6 +20,7 @@ final class Tab {
     boolean ntp = true;     // true: تُعرض صفحة «علامة تبويب جديدة»
     boolean desktop;
     Tab parent;
+    TabGroup group;
 
     Tab(boolean incognito) {
         this.incognito = incognito;
