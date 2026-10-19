@@ -2,8 +2,9 @@
   <div id="search_header">
     <a id="search_logo" href="{{ url_for('index') }}" tabindex="0" title="{{ _('Display the front page') }}">
       <span hidden>Seekr</span>
-      {% include 'simple/seekr-wordmark.min.svg' without context %}<b class="logo_text">Seekr</b>
+      <b class="logo_text">Seekr</b>
     </a>
+    <button type="button" id="filters_btn" class="hide_if_nojs" aria-label="{{ _('Filters') }}" aria-expanded="false"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/></svg></button>
     <div id="search_view">
       <div class="search_box">
         <input id="q" name="q" type="text" placeholder="{{ _('Search for...') }}" tabindex="1" autocomplete="off" autocapitalize="none" spellcheck="false" autocorrect="off" dir="auto" value="{{ q or '' }}">
@@ -23,3 +24,4 @@
   <input type="hidden" name="theme" value="{{ theme }}" >
   {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}" >{% endif %}
 </form>
+<script src="{{ url_for('static', filename='chrome-results.js') }}" defer></script>
