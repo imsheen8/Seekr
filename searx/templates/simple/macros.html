@@ -32,15 +32,13 @@
 <article class="result {% if result['template'] %}result-{{ result.template|replace('.html', '') }}{% else %}result-default{% endif %} {% if result['category'] %}category-{{ result['category'] }}{% endif %}">
   {%- if thumbnail %}{{ result_thumbnail(result, image_proxify) }}{% endif -%}
   <div class="result_inner">
+  {%- set _host = result.parsed_url.netloc|replace('www.', '') -%}
+  {%- set _p = _host.split('.') -%}
+  {%- if _p|length > 2 and _p[-2] in ('co', 'com', 'org', 'net', 'gov', 'ac', 'edu') -%}{%- set _site = _p[-3] -%}
+  {%- elif _p|length > 1 -%}{%- set _site = _p[-2] -%}{%- else -%}{%- set _site = _host -%}{%- endif -%}
   {{- result_open_link(result.url, "url_header") -}}
-  {%- if favicon_resolver != "" %}
-  <div class="favicon"><img loading="lazy" src="{{ favicon_url(result.parsed_url.netloc) }}"></div>
-  {%- endif -%}
-  <div class="url_wrapper">
-    {%- for part in get_pretty_url(result.parsed_url) -%}
-    <span class="url_o{{loop.index}}"><span class="url_i{{loop.index}}">{{- part -}}</span></span>
-    {%- endfor %}
-  </div>
+  <span class="r_fav"><b>{{ (_site[:1] or '?')|upper }}</b>{% if favicon_resolver != "" %}<img loading="lazy" alt="" src="{{ favicon_url(result.parsed_url.netloc) }}" onerror="this.remove()">{% endif %}</span>
+  <span class="r_names"><span class="r_site">{{ _site|capitalize }}</span><span class="r_url">{{ get_pretty_url(result.parsed_url)|join('') }}</span></span>
   {{- result_close_link() -}}
   <h3>{{ result_link(result.url, result.title|safe) }}</h3>
 {%- endmacro -%}
