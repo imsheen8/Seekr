@@ -49,6 +49,7 @@ body.results_endpoint .search_categories .help { display: none; }
 
 /* ================= الفلاتر: زر بجانب الشعار + قائمة منبثقة ================= */
 body.results_endpoint .search_filters { display: none !important; }
+body.results_endpoint #search_header { z-index: 20; }
 body.results_endpoint #search_header { position: relative; }
 body.results_endpoint #search_logo { justify-content: center; min-height: 48px; box-sizing: border-box; }
 body.results_endpoint #filters_btn {
@@ -57,22 +58,45 @@ body.results_endpoint #filters_btn {
 }
 body.results_endpoint #filters_btn.open, body.results_endpoint #filters_btn:active { background: var(--q-surface-2); }
 body.results_endpoint #filters_panel {
-  position: absolute; z-index: 50; top: 58px; inset-inline-end: 12px; width: min(300px, calc(100vw - 24px)); max-height: 72vh; overflow-y: auto;
-  box-sizing: border-box; padding: 8px 0 10px; background: var(--q-surface); border: 1px solid var(--q-border); border-radius: 22px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.45);
+  position: absolute; z-index: 5000; top: 58px; inset-inline-end: 12px; width: min(320px, calc(100vw - 24px)); max-height: 76vh; overflow-y: auto;
+  box-sizing: border-box; padding: 6px 0; background: var(--q-surface); border: 1px solid var(--q-border); border-radius: 22px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.5); isolation: isolate;
 }
 body.results_endpoint #filters_panel[hidden] { display: none; }
-body.results_endpoint .fp_title { padding: 12px 22px 6px; font-size: .8rem; font-weight: 600; color: var(--q-muted); text-align: start; }
-body.results_endpoint .fp_sep { height: 1px; margin: 8px 14px 0; background: var(--q-border); }
-body.results_endpoint .fp_scroll { max-height: 220px; overflow-y: auto; }
-body.results_endpoint .fp_row {
-  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 46px; padding: 0 22px; border: 0; background: transparent;
-  color: var(--q-text); font: inherit; font-size: .98rem; text-align: start; cursor: pointer;
+body.results_endpoint .fp_head {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 8px 22px; border: 0; background: transparent;
+  color: var(--q-text); font: inherit; text-align: start; cursor: pointer; border-bottom: 1px solid var(--q-border);
 }
-body.results_endpoint .fp_row:active { background: var(--q-surface-2); }
+body.results_endpoint .fp_head:last-child { border-bottom: 0; }
+body.results_endpoint .fp_head:active { background: var(--q-surface-2); }
+body.results_endpoint .fp_htxt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+body.results_endpoint .fp_h1 { font-size: 1rem; color: var(--q-text); }
+body.results_endpoint .fp_h2 { font-size: .8rem; color: var(--q-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.results_endpoint .fp_chev { flex: none; color: var(--q-text-2); display: grid; place-items: center; transition: transform .2s; }
+body.results_endpoint .fp_head.open .fp_chev { transform: rotate(180deg); }
+body.results_endpoint .fp_head.open { border-bottom-color: transparent; }
+body.results_endpoint .fp_list { padding: 0 0 6px; background: var(--q-surface-2); border-bottom: 1px solid var(--q-border); }
+body.results_endpoint .fp_scroll { max-height: 230px; overflow-y: auto; }
+body.results_endpoint .fp_row {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0 22px; border: 0; background: transparent;
+  color: var(--q-text); font: inherit; font-size: .94rem; text-align: start; cursor: pointer;
+}
+body.results_endpoint .fp_row:active { background: var(--q-surface-3); }
 body.results_endpoint .fp_row .fp_txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 body.results_endpoint .fp_row .fp_ck { width: 20px; flex: none; text-align: center; font-weight: 700; }
 body.results_endpoint .fp_row.on { color: var(--q-accent); }
+
+/* ===== منع وضع «ملء الشاشة» عند التركيز على حقل البحث (كان يكسر الصفحة عند الضغط على X) ===== */
+body.results_endpoint #search_view:focus-within {
+  position: static; width: 100%; height: auto; display: block; background: transparent; z-index: auto;
+}
+body.results_endpoint #search_view:focus-within .search_box { width: 100%; border-bottom: 0; border-radius: 24px; background: var(--q-surface-2); }
+body.results_endpoint #search_view:focus-within .search_box * { box-shadow: none; border: 0; border-radius: 0; }
+body.results_endpoint #search_view:focus-within .search_box #send_search,
+body.results_endpoint #search_view:focus-within .search_box #clear_search { border-radius: 50%; margin: 0; }
+body.results_endpoint #search_view { position: relative; z-index: 10; }
+body.results_endpoint .autocomplete { z-index: 4000; }
+body.results_endpoint #filters_btn { z-index: 5001; }
 
 /* ================= المحتوى ================= */
 body.results_endpoint #results { display: flex; flex-direction: column; padding: 0; margin: 0; }
