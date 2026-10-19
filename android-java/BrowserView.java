@@ -27,6 +27,7 @@ import android.text.InputType;
 import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.animation.ValueAnimator;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
@@ -723,6 +724,7 @@ final class BrowserView extends FrameLayout {
     }
 
     private void showCurrent() {
+        setToolbarHidden(false);
         webHolder.removeAllViews();
         if (cur == null) return;
         if (cur.ntp) {
@@ -862,6 +864,13 @@ final class BrowserView extends FrameLayout {
                 if (cur != p) switchTo(p);
                 return true;
             }
+            // لا سجل للتصفح في هذا التبويب: العودة إلى الشاشة الرئيسية بدل الخروج من التطبيق
+            if (!cur.ntp) {
+                cur.ntp = true;
+                showCurrent();
+                refreshUi();
+                return true;
+            }
         }
         act.moveTaskToBack(true);
         return true;
@@ -875,6 +884,7 @@ final class BrowserView extends FrameLayout {
     //  الصفحات الكاملة (سجل، تنزيلات…)
     // =====================================================================
     void pushPage(View v) {
+        setToolbarHidden(false);
         omni.clearFocus();
         hideIme();
         pages.add(v);
@@ -900,6 +910,7 @@ final class BrowserView extends FrameLayout {
     /** يطبّق تفضيلات الشريط: زر الرئيسية وموضع شريط العنوان (أعلى/أسفل). */
     void applyToolbarPrefs() {
         homeBtn.setVisibility(store.getBool("homepage_on", true) ? View.VISIBLE : View.GONE);
+        tbHidden = false;
         boolean bottom = "bottom".equals(store.getStr("addr_pos", "top"));
         int idx = main.indexOfChild(toolbar);
         if (bottom && idx != main.getChildCount() - 1) {
@@ -968,6 +979,7 @@ final class BrowserView extends FrameLayout {
         tabCount.setCount(countFor(incognitoMode), Theme.text);
         boolean f = omni.hasFocus();
         // في صفحة «علامة تبويب جديدة» يكون مربع البحث الكبير هو الوحيد (مثل كروم)
+        if (cur.ntp || f) setToolbarHidden(false);
         boolean hideBar = cur.ntp && !f;
         omniBox.setVisibility(hideBar ? View.GONE : View.VISIBLE);
         if (ntpSpacer != null) ntpSpacer.setVisibility(hideBar ? View.VISIBLE : View.GONE);
@@ -1044,6 +1056,7 @@ final class BrowserView extends FrameLayout {
     }
 
     void focusOmnibox() {
+        setToolbarHidden(false);
         omniBox.setVisibility(View.VISIBLE);
         if (ntpSpacer != null) ntpSpacer.setVisibility(View.GONE);
         omni.requestFocus();
@@ -1738,7 +1751,7 @@ final class BrowserView extends FrameLayout {
                 t.url = url;
                 t.loading = true;
                 t.progress = 5;
-                if (t == cur) refreshUi();
+                if (t == cur) { setToolbarHidden(false); refreshUi(); }
             }
 
             @Override
@@ -1991,8 +2004,71 @@ final class BrowserView extends FrameLayout {
             }
         });
 
+        w.setOnScrollChangeListener(new View.OnScrollChangeListener() {
+            @Override
+            public void onScrollChange(View v, int sx, int sy, int ox, int oy) {
+                if (t == cur) onWebScroll(sy, oy);
+            }
+        });
         w.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         return w;
+    }
+
+    // ---------- إخفاء شريط العنوان عند النزول وإظهاره عند الصعود (مثل كروم) ----------
+    private boolean tbHidden;
+    private int tbFull;
+    private float tbAccum;
+    private long tbIgnoreUntil;
+    private ValueAnimator tbAnim;
+
+    private void onWebScroll(int sy, int oy) {
+        if (System.currentTimeMillis() < tbIgnoreUntil) return;
+        if (sy <= Theme.dp(6)) { tbAccum = 0; setToolbarHidden(false); return; }
+        int dy = sy - oy;
+        if (dy == 0) return;
+        if (dy * tbAccum < 0) tbAccum = 0;
+        tbAccum += dy;
+        if (tbAccum > Theme.dp(28)) { tbAccum = 0; setToolbarHidden(true); }
+        else if (tbAccum < -Theme.dp(14)) { tbAccum = 0; setToolbarHidden(false); }
+    }
+
+    void setToolbarHidden(boolean hide) {
+        if (toolbar == null) return;
+        if (hide) {
+            if (cur == null || cur.ntp || omni.hasFocus() || findBar.getVisibility() == View.VISIBLE
+                    || (pageLayer != null && pageLayer.getChildCount() > 0 && pageLayer.getVisibility() == View.VISIBLE)) return;
+        }
+        if (tbHidden == hide) return;
+        tbHidden = hide;
+        tbIgnoreUntil = System.currentTimeMillis() + 450;
+        if (tbAnim != null) tbAnim.cancel();
+        final ViewGroup.LayoutParams lp = toolbar.getLayoutParams();
+        int from = toolbar.getHeight();
+        if (hide && from > 0) tbFull = from;
+        if (tbFull <= 0) tbFull = Theme.dp(58);
+        int to = hide ? 0 : tbFull;
+        tbAnim = ValueAnimator.ofInt(from, to);
+        tbAnim.setDuration(180);
+        final boolean h = hide;
+        tbAnim.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator a) {
+                lp.height = (Integer) a.getAnimatedValue();
+                toolbar.setLayoutParams(lp);
+            }
+        });
+        tbAnim.addListener(new android.animation.AnimatorListenerAdapter() {
+            private boolean cancelled;
+            @Override public void onAnimationCancel(android.animation.Animator a) { cancelled = true; }
+            @Override
+            public void onAnimationEnd(android.animation.Animator a) {
+                if (cancelled) return;
+                lp.height = h ? 0 : ViewGroup.LayoutParams.WRAP_CONTENT;
+                toolbar.setLayoutParams(lp);
+                tbIgnoreUntil = System.currentTimeMillis() + 300;
+            }
+        });
+        tbAnim.start();
     }
 
     private void hideCustomView() {
